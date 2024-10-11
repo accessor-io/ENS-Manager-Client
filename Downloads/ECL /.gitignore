@@ -1,0 +1,12 @@
+node_modules
+*test.js
+*.js.map
+*.ts
+*.tsx
+*.d.ts
+*.map
+*.json
+*.lock
+*.log
+*.txt
+*.md

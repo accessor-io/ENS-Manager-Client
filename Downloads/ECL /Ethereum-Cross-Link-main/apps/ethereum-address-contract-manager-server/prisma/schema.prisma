@@ -1,0 +1,66 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Contract {
+  abi             Json?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  categoryId      String?
+  contractAddress String?
+  createdAt       DateTime  @default(now())
+  description     String?
+  id              String    @id @default(cuid())
+  project         Project?  @relation(fields: [projectId], references: [id])
+  projectId       String?
+  updatedAt       DateTime  @updatedAt
+}
+
+model Category {
+  contracts     Contract[]
+  createdAt     DateTime   @default(now())
+  description   String?
+  id            String     @id @default(cuid())
+  identifier    Int?
+  name          String?
+  subcategories String?
+  updatedAt     DateTime   @updatedAt
+}
+
+model Address {
+  address   String?
+  createdAt DateTime              @default(now())
+  id        String                @id @default(cuid())
+  project   Project?              @relation(fields: [projectId], references: [id])
+  projectId String?
+  typeField EnumAddressTypeField?
+  updatedAt DateTime              @updatedAt
+}
+
+model Signature {
+  createdAt  DateTime  @default(now())
+  dateSigned DateTime?
+  id         String    @id @default(cuid())
+  signedData Json?
+  signer     String?
+  updatedAt  DateTime  @updatedAt
+}
+
+model Project {
+  addresses   Address[]
+  contracts   Contract[]
+  createdAt   DateTime   @default(now())
+  description String?
+  id          String     @id @default(cuid())
+  identifier  Int?
+  name        String?
+  updatedAt   DateTime   @updatedAt
+}
+
+enum EnumAddressTypeField {
+  Option1
+}

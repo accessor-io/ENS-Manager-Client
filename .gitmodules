@@ -1,0 +1,9 @@
+[submodule "gauss/lib/forge-std"]
+	path = gauss/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "reentrancy-test/reentrancy-test/lib/forge-std"]
+	path = reentrancy-test/reentrancy-test/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "reentrancy-test/reentrancy-test/lib/openzeppelin-contracts"]
+	path = reentrancy-test/reentrancy-test/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
