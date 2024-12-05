@@ -7,3 +7,9 @@
 [submodule "reentrancy-test/reentrancy-test/lib/openzeppelin-contracts"]
 	path = reentrancy-test/reentrancy-test/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "audit/swaap/lib/forge-std"]
+	path = audit/swaap/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "audit/swaap/lib/balancer-v2-monorepo"]
+	path = audit/swaap/lib/balancer-v2-monorepo
+	url = https://github.com/balancer-labs/balancer-v2-monorepo
