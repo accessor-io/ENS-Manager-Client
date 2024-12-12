@@ -1,0 +1,54 @@
+[tool.poetry]
+name = "ens-manager"
+version = "0.1.0"
+description = "A comprehensive Ethereum Name Service (ENS) management tool"
+authors = ["accessor.eth <acc@accessor.io>"]
+maintainers = ["accessor.eth <acc@accessor.io>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/accessor/ens-manager"
+repository = "https://github.com/accessor/ens-manager"
+documentation = "https://github.com/accessor/ens-manager/docs"
+keywords = ["ethereum", "ens", "web3", "blockchain", "domains"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: Name Service (DNS)",
+    "Topic :: Utilities"
+]
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+web3 = "^6.0.0"
+click = "^8.1.3"
+rich = "^13.3.5"
+python-dotenv = "^1.0.0"
+eth-utils = "^2.1.0"
+base58 = "^2.1.1"
+questionary = "^2.0.1"
+cryptography = "^42.0.0"
+typing-extensions = "^4.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+black = "^23.11.0"
+isort = "^5.12.0"
+flake8 = "^6.1.0"
+mypy = "^1.7.1"
+pre-commit = "^3.5.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ens-manager = "src.cli:main"
