@@ -59,15 +59,20 @@ class UIManager:
         )
         self.console.print(header)
         
-    def create_menu(self, title: str, options: List[str]) -> str:
+    def create_menu(self, title: str, options: List[str]) -> Optional[str]:
         """Create an interactive menu with enhanced styling."""
-        return questionary.select(
-            title,
-            choices=options,
-            style=QUESTIONARY_STYLE,
-            qmark="🔹",
-            instruction="(Use arrow keys and Enter to select)"
-        ).ask()
+        try:
+            result = questionary.select(
+                title,
+                choices=options,
+                style=QUESTIONARY_STYLE,
+                qmark="🔹",
+                instruction="(Use arrow keys and Enter to select)"
+            ).ask()
+            return result
+        except Exception as e:
+            self.display_error(f"Menu error: {str(e)}")
+            return None
         
     def display_ens_info(self, info: Dict[str, Any]):
         """Display ENS information in a styled table."""

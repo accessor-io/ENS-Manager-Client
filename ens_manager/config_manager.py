@@ -195,3 +195,64 @@ class ConfigManager:
     def get_active_provider(self) -> Optional[str]:
         """Get the name of the active provider."""
         return self.config.get('active_provider')
+
+    def add_account(self, name: str, private_key: str) -> bool:
+        """Add a new account configuration."""
+        try:
+            if 'accounts' not in self.config:
+                self.config['accounts'] = {}
+                
+            self.config['accounts'][name] = {
+                'private_key': private_key,
+                'address': self._derive_address(private_key)
+            }
+            self._save_config()
+            return True
+        except Exception as e:
+            print(f"Error adding account: {str(e)}")
+            return False
+            
+    def remove_account(self, name: str) -> bool:
+        """Remove an account configuration."""
+        try:
+            if name in self.config.get('accounts', {}):
+                del self.config['accounts'][name]
+                self._save_config()
+                return True
+            return False
+        except Exception as e:
+            print(f"Error removing account: {str(e)}")
+            return False
+            
+    def list_accounts(self) -> List[str]:
+        """List configured accounts."""
+        return list(self.config.get('accounts', {}).keys())
+        
+    def get_account(self, name: Optional[str] = None) -> Optional[str]:
+        """Get account private key by name or active account."""
+        accounts = self.config.get('accounts', {})
+        if not name:
+            name = self.get_active_account()
+        return accounts.get(name, {}).get('private_key') if name else None
+        
+    def set_active_account(self, name: str) -> bool:
+        """Set the active account."""
+        if name in self.config.get('accounts', {}):
+            self.config['active_account'] = name
+            self._save_config()
+            return True
+        return False
+        
+    def get_account_info(self, name: str) -> Dict[str, Any]:
+        """Get detailed information about an account."""
+        return self.config.get('accounts', {}).get(name, {})
+        
+    def get_active_account(self) -> Optional[str]:
+        """Get the name of the active account."""
+        return self.config.get('active_account')
+        
+    def _derive_address(self, private_key: str) -> str:
+        """Derive Ethereum address from private key."""
+        from eth_account import Account
+        account = Account.from_key(private_key)
+        return account.address

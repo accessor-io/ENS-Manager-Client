@@ -61,10 +61,14 @@ def manage_providers():
                 break
                 
             if action == "Add new provider":
+                provider_choices = list(ConfigManager.DEFAULT_PROVIDERS.keys()) + ["Custom"]
                 provider_type = ui.create_menu(
                     "Select provider type:",
-                    list(ConfigManager.DEFAULT_PROVIDERS.keys()) + ["Custom"],
+                    provider_choices
                 )
+                
+                if not provider_type:
+                    continue
                 
                 name = ui.prompt_input("Enter provider name:")
                 if not name:
@@ -114,7 +118,26 @@ def manage_providers():
                         ui.display_success(f"Set {name} as active provider")
                     
             elif action == "View providers":
-                config_manager.display_config_status()
+                providers = config_manager.list_providers()
+                if not providers:
+                    ui.display_warning("No providers configured")
+                else:
+                    active = config_manager.get_active_provider()
+                    table = Table(title="Configured Providers")
+                    table.add_column("Provider", style="cyan")
+                    table.add_column("Type", style="magenta")
+                    table.add_column("URL", style="green")
+                    table.add_column("Status", style="yellow")
+                    
+                    for name in providers:
+                        provider = config_manager.get_provider_info(name)
+                        table.add_row(
+                            name,
+                            provider.get('type', 'Custom'),
+                            provider.get('url', ''),
+                            "Active" if name == active else ""
+                        )
+                    console.print(table)
             
             ui.pause()
         except Exception as e:
@@ -1508,8 +1531,9 @@ def interactive_menu():
             ui.display_error(f"Operation failed: {str(e)}")
             ui.pause()
 
+@click.command()
 def main():
-    """Main entry point for the CLI."""
+    """ENS Manager - Ethereum Name Service Management Tool."""
     try:
         ui.display_header()
         
