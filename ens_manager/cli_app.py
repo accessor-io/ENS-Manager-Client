@@ -16,10 +16,13 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
+import sys
 
-from ens_manager.ens_operations import ENSManager
+from ens_manager.operations.ens_manager import ENSManager
 from ens_manager.config.config_manager import ConfigManager
-from ens_manager.ui_manager import UIManager
+from ens_manager.ui.ui_manager import UIManager
+from ens_manager.config import Config
+from ens_manager.notifications import NotificationManager, NotificationType
 
 ui = UIManager()
 config_manager = ConfigManager()
@@ -32,7 +35,15 @@ def init_manager() -> Optional[ENSManager]:
         private_key = config_manager.get_account()
 
         if not provider_url:
-            provider_url = ui.prompt_input("Enter Ethereum provider URL:")
+            provider_choices = list(ConfigManager.DEFAULT_PROVIDERS.keys()) + ["Custom"]
+            provider_type = ui.create_menu("Select Ethereum provider:", provider_choices)
+
+            if provider_type == "Custom":
+                provider_url = ui.prompt_input("Enter Ethereum provider URL:")
+            else:
+                api_key = ui.prompt_input(f"Enter API key for {provider_type}:")
+                provider_url = ConfigManager.DEFAULT_PROVIDERS[provider_type].format(api_key)
+
             if provider_url:
                 config_manager.set_setting('provider_url', provider_url)
             else:
@@ -401,7 +412,7 @@ def manage_subdomains(manager):
             ui.display_error(f"Subdomain management error: {str(e)}")
             ui.pause()
 
-    def manage_notifications():
+def manage_notifications():
     """Manage notification preferences for ENS name expirations."""
     actions = [
         "Enable email notifications",
@@ -724,23 +735,83 @@ def transfer_ens_name(manager):
     else:
         ui.display_error(f"Failed to transfer {name}")
 
+def display_provider_menu():
+    """Display the provider selection menu."""
+    print("\nSelect your Ethereum provider:")
+    print("-" * 50)
+    
+    for idx, (key, provider) in enumerate(Config.PROVIDER_OPTIONS.items(), 1):
+        print(f"{idx}. {provider['name']}")
+        print(f"   {provider['description']}")
+        print()
+    
+    return list(Config.PROVIDER_OPTIONS.keys())
+
+def get_provider_details(provider_key):
+    """Get the necessary details for the selected provider."""
+    provider = Config.PROVIDER_OPTIONS[provider_key]
+    
+    if provider_key in ['infura', 'alchemy']:
+        print(f"\nEnter your {provider['name']} API key:")
+        api_key = input("> ").strip()
+        return provider['url_template'].format(api_key=api_key)
+    else:
+        print(f"\nEnter your {provider['name']} URL:")
+        custom_url = input("> ").strip()
+        return custom_url
+
+def get_valid_provider_url():
+    """Get and validate provider URL through provider selection."""
+    while True:
+        provider_keys = display_provider_menu()
+        
+        try:
+            print("\nEnter the number of your preferred provider:")
+            choice = int(input("> ").strip())
+            
+            if 1 <= choice <= len(provider_keys):
+                provider_key = provider_keys[choice - 1]
+                provider_url = get_provider_details(provider_key)
+                
+                config = Config()
+                config.validate_url(provider_url)
+                return provider_url
+            else:
+                print("Invalid selection. Please try again.")
+        
+        except ValueError:
+            print("Please enter a valid number.")
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            print(f"Error: {e}")
+            print("Would you like to try again? (y/n)")
+            if input("> ").lower() != 'y':
+                sys.exit(1)
+
 def main():
     config = Config()
     
     print("ENS Manager - A comprehensive Ethereum Name Service management tool\n")
     
     if not config.has_provider():
-        print("No ETH provider URL found. Please enter your Ethereum provider URL:")
-        print("(e.g., https://mainnet.infura.io/v3/YOUR-PROJECT-ID)")
-        provider_url = input("> ")
-        config.set_provider_url(provider_url)
+        try:
+            provider_url = get_valid_provider_url()
+            config.set_provider_url(provider_url)
+        except KeyboardInterrupt:
+            print("\nSetup cancelled. Exiting...")
+            sys.exit(0)
     
-    # Continue with the rest of your application...
     try:
         app = ENSManager(config.eth_provider_url)
         app.run()
     except Exception as e:
-        print(f"Error initializing ENS Manager: {e}")
+        print(f"\nError initializing ENS Manager: {e}")
+        print("Would you like to select a different provider? (y/n)")
+        if input("> ").lower() == 'y':
+            provider_url = get_valid_provider_url()
+            config.set_provider_url(provider_url)
+            main()  # Restart the application
 
 if __name__ == "__main__":
     main() 
