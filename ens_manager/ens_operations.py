@@ -5,7 +5,6 @@ from typing import Dict, List, Optional, Union, Any, Tuple
 from web3 import Web3
 from eth_utils import is_address, to_checksum_address, decode_hex
 from web3.middleware import geth_poa_middleware
-from ens import ENS
 import os
 from dotenv import load_dotenv
 import json
@@ -631,82 +630,54 @@ class GlobalResolver:
             }
 
 class ENSManager:
-    """Manages ENS operations."""
-    
+    """Main class for ENS operations."""
+
     def __init__(self, provider_url: Optional[str] = None, private_key: Optional[str] = None):
         """Initialize ENS Manager."""
-        if not provider_url:
-            provider_url = os.getenv('ETH_MAINNET_RPC', 'https://eth-mainnet.g.alchemy.com/v2/your-api-key')
+        load_dotenv()
+        self.provider_url = provider_url or os.getenv('ETH_PROVIDER_URL')
+        self.private_key = private_key or os.getenv('ETH_PRIVATE_KEY')
         
-        self.w3 = Web3(Web3.HTTPProvider(provider_url))
+        if not self.provider_url:
+            raise ValueError("Provider URL is required")
+            
+        self.w3 = Web3(Web3.HTTPProvider(self.provider_url))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         
-        # Ensure ENS is properly initialized
-        if not hasattr(self.w3, 'ens'):
-            from ens import ENS
-            self.w3.ens = ENS.from_web3(self.w3)
+        # Initialize ENS
+        self.ns = self.w3.ens
         
-        if private_key:
-            account = self.w3.eth.account.from_key(private_key)
-            self.w3.eth.default_account = account.address
-        
-        self.network_manager = NetworkManager()
-        self.cross_resolver = CrossNetworkResolver(self.network_manager)
-        self.global_resolver = GlobalResolver(self.network_manager)
-        
-        # Initialize ENS registry contract
+        # Initialize ENS Registry contract
         self.registry = self.w3.eth.contract(
             address=ENS_REGISTRY_ADDRESS,
             abi=ENS_REGISTRY_ABI
         )
         
-        # Set up ENS resolver
-        self.resolver = self.w3.eth.contract(
-            abi=ENS_RESOLVER_ABI
-        )
-        
-        # Set up ENS controller
+        if self.private_key:
+            self.account = self.w3.eth.account.from_key(self.private_key)
+        else:
+            self.account = None
+
+        # Initialize ENS Controller contract
         self.controller = self.w3.eth.contract(
             address=ENS_CONTROLLER_ADDRESS,
             abi=ENS_CONTROLLER_ABI
         )
-    
+
+        self.activity_tracker = ENSActivity()
+        self.etherscan_api_key = os.getenv('ETHERSCAN_API_KEY')
+
+        self.network_manager = NetworkManager()
+        self.cross_resolver = CrossNetworkResolver(self.network_manager)
+        self.global_resolver = GlobalResolver(self.network_manager)
+
     def resolve_name(self, name: str, network: Optional[str] = None) -> Optional[str]:
         """Resolve ENS name to address on specified network."""
-        try:
-            if network is None:
-                network = self.network_manager.current_network
-            
-            # First try network-specific resolution
-            address = self.cross_resolver.get_network_specific_address(name, network)
-            if address:
-                return address
-            
-            # If on mainnet or no network-specific resolution, try default resolution
-            if network == 'mainnet':
-                try:
-                    # Use Web3's ENS resolution
-                    address = self.w3.ens.address(name)
-                    if address and address != "0x0000000000000000000000000000000000000000":
-                        return address
-                except Exception as e:
-                    print(f"Error in mainnet resolution: {e}")
-            
-            return None
-        except Exception as e:
-            print(f"Error resolving name {name}: {e}")
-            return None
-
-    def reverse_resolve(self, address: str) -> Optional[str]:
-        """Reverse resolve address to ENS name."""
-        try:
-            if not is_address(address):
-                return None
-            return self.w3.ens.name(address)
-        except Exception as e:
-            print(f"Error reverse resolving: {e}")
-            return None
-
+        if network is None:
+            network = self.network_manager.current_network
+        
+        return self.cross_resolver.get_network_specific_address(name, network)
+    
     def set_network_resolution(self, name: str, network: str, address: str) -> Tuple[bool, str]:
         """Set network-specific resolution for an ENS name."""
         return self.cross_resolver.set_network_address(name, network, address)
@@ -726,6 +697,17 @@ class ENSManager:
     def set_network(self, network: str) -> bool:
         """Set current network for operations."""
         return self.network_manager.set_current_network(network)
+
+    def reverse_resolve(self, address: str) -> Optional[str]:
+        """Reverse resolve Ethereum address to ENS name."""
+        try:
+            if not is_address(address):
+                return None
+            name = self.w3.ens.name(address)
+            return name if name else None
+        except Exception as e:
+            print(f"Error reverse resolving address {address}: {e}")
+            return None
 
     def get_owner(self, name: str) -> Optional[str]:
         """Get owner of ENS name."""
