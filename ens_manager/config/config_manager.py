@@ -10,6 +10,64 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from datetime import datetime, timedelta
 
+class Config:
+    """Configuration settings for ENS Manager."""
+    PROVIDER_OPTIONS = {
+        'infura': {
+            'name': 'Infura',
+            'description': 'Infura is a popular Ethereum infrastructure provider.',
+            'url_template': 'https://mainnet.infura.io/v3/{api_key}'
+        },
+        'alchemy': {
+            'name': 'Alchemy',
+            'description': 'Alchemy provides powerful APIs for Ethereum.',
+            'url_template': 'https://eth-mainnet.alchemyapi.io/v2/{api_key}'
+        },
+        'quicknode': {
+            'name': 'QuickNode',
+            'description': 'QuickNode offers fast and reliable Ethereum nodes.',
+            'url_template': 'https://api.quicknode.com/{api_key}'
+        },
+        'custom': {
+            'name': 'Custom',
+            'description': 'Enter a custom Ethereum provider URL.',
+            'url_template': ''
+        }
+    }
+
+    def validate_url(self, url: str) -> bool:
+        """Validate the provided URL."""
+        # Add URL validation logic here
+        return True
+
+    def set_provider_url(self, url: str) -> None:
+        """Set the provider URL in the configuration."""
+        # Add logic to save the provider URL
+        pass
+
+    def has_provider(self) -> bool:
+        """Check if a provider URL is set."""
+        # Add logic to check if a provider URL is set
+        return False
+
+    def get_provider_url(self) -> Optional[str]:
+        """Get the Ethereum provider URL from the configuration."""
+        return self.config.get('provider_url')
+
+    def set_provider_url(self, url: str) -> None:
+        """Set the Ethereum provider URL in the configuration."""
+        self.config['provider_url'] = url
+        self._save_config()
+
+    def get_notifications(self) -> Dict[str, Any]:
+        """Get notification settings from the configuration."""
+        return self.config.get('notifications', {})
+
+    def set_notifications(self, notifications: Dict[str, Any]) -> None:
+        """Set notification settings in the configuration."""
+        self.config['notifications'] = notifications
+        self._save_config()
+
 class ConfigManager:
     """Manages configuration settings for ENS Manager."""
     
