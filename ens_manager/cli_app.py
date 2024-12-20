@@ -17,9 +17,9 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
-from .ens_operations import ENSManager
-from .config_manager import ConfigManager
-from .ui_manager import UIManager
+from ens_manager.ens_operations import ENSManager
+from ens_manager.config_manager import ConfigManager
+from ens_manager.ui_manager import UIManager
 
 ui = UIManager()
 config_manager = ConfigManager()
@@ -313,20 +313,20 @@ def manage_names():
             ui.pause()
 
 def interactive_menu():
-    """Run the interactive menu."""
+    """Run the interactive menu with enhanced descriptions."""
     actions = [
-        "Resolve ENS name",
-        "Reverse resolve",
-        "Get owner",
-        "Get resolver",
-        "Get TTL",
-        "Get text record",
-        "View name history",
-        "Manage names",
-        "Manage networks",
-        "Manage providers",
-        "Manage accounts",
-        "Exit"
+        "Resolve ENS name - Look up the address associated with an ENS name",
+        "Reverse resolve - Find the ENS name associated with an address",
+        "Get owner - Retrieve the owner of an ENS name",
+        "Get resolver - Get the resolver for an ENS name",
+        "Get TTL - Get the time-to-live for an ENS name",
+        "Get text record - Retrieve a text record for an ENS name",
+        "View name history - View the history of changes for an ENS name",
+        "Manage names - Add, remove, or update ENS names",
+        "Manage networks - Configure network settings",
+        "Manage providers - Add, remove, or set active providers",
+        "Manage accounts - Add, remove, or set active accounts",
+        "Exit - Quit the application"
     ]
     
     while True:
@@ -336,20 +336,20 @@ def interactive_menu():
             
             if action == "Exit" or not action:
                 break
-                
+            
             if action == "Manage providers":
                 manage_providers()
                 continue
-                
+            
             elif action == "Manage accounts":
                 manage_accounts()
                 continue
-                
+            
             elif action == "View configuration":
                 config_manager.display_config_status()
                 ui.pause()
                 continue
-                
+            
             elif action == "Manage names":
                 manage_names()
                 continue
@@ -407,7 +407,7 @@ def interactive_menu():
             
             ui.pause()
         except Exception as e:
-            ui.display_error(f"Operation failed: {str(e)}")
+            ui.display_error(f"An error occurred: {str(e)}. Please try again or contact support.")
             ui.pause()
 
 def handle_ens_operation(name: str, operation_name: str, operation_func, *args):
@@ -422,29 +422,72 @@ def handle_ens_operation(name: str, operation_name: str, operation_func, *args):
         ui.display_error(f"Operation failed: {str(e)}")
         return None
 
+def initial_configuration():
+    """Initial configuration menu for importing accounts and using saved accounts."""
+    actions = [
+        "Import account by private key",
+        "Use previously configured account",
+        "Back to main menu"
+    ]
+
+    while True:
+        try:
+            action = ui.create_menu("Initial Configuration", actions)
+
+            if action == "Back to main menu" or not action:
+                break
+
+            if action == "Import account by private key":
+                label = ui.prompt_input("Enter account label:")
+                if not label:
+                    continue
+
+                private_key = ui.prompt_input("Enter private key:", password=True)
+                if private_key:
+                    if config_manager.add_account(label, private_key):
+                        ui.display_success(f"Imported account {label}")
+
+            elif action == "Use previously configured account":
+                accounts = config_manager.list_accounts()
+                if not accounts:
+                    ui.display_warning("No accounts configured")
+                    continue
+
+                label = ui.create_menu(
+                    "Select account to use:",
+                    accounts + ["Cancel"]
+                )
+
+                if label and label != "Cancel":
+                    if config_manager.set_active_account(label):
+                        ui.display_success(f"Using account {label}")
+
+            ui.pause()
+        except Exception as e:
+            ui.display_error(f"Configuration error: {str(e)}")
+            ui.pause()
+
 @click.command()
 def main():
     """ENS Manager - Ethereum Name Service Management Tool."""
     try:
         ui.display_header()
-        
+
         # Initialize configuration
-        if config_manager.config_file.exists():
-            password = ui.prompt_input("Enter password for configuration:", password=True)
-            if not config_manager.initialize(password):
-                ui.display_error("Invalid password")
-                return
-        else:
+        if not config_manager.initialize():
             password = ui.prompt_input("Create a password for configuration encryption:", password=True)
             confirm = ui.prompt_input("Confirm password:", password=True)
-            
+
             if password != confirm:
                 ui.display_error("Passwords do not match")
                 return
-                
+
             if not config_manager.initialize(password):
                 return
-        
+
+        # Initial configuration menu
+        initial_configuration()
+
         interactive_menu()
         ui.console.print("\n[accent]Goodbye! 👋[/accent]")
     except KeyboardInterrupt:
