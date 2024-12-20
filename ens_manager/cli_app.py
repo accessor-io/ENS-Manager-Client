@@ -30,11 +30,15 @@ def init_manager() -> Optional[ENSManager]:
     try:
         provider_url = config_manager.get_provider()
         private_key = config_manager.get_account()
-        
+
         if not provider_url:
-            ui.display_error("No active provider configured")
-            return None
-            
+            provider_url = ui.prompt_input("Enter Ethereum provider URL:")
+            if provider_url:
+                config_manager.set_setting('provider_url', provider_url)
+            else:
+                ui.display_error("Provider URL is required")
+                return None
+
         return ENSManager(
             provider_url=provider_url,
             private_key=private_key
@@ -720,33 +724,23 @@ def transfer_ens_name(manager):
     else:
         ui.display_error(f"Failed to transfer {name}")
 
-@click.command()
 def main():
-    """ENS Manager - Ethereum Name Service Management Tool."""
+    config = Config()
+    
+    print("ENS Manager - A comprehensive Ethereum Name Service management tool\n")
+    
+    if not config.has_provider():
+        print("No ETH provider URL found. Please enter your Ethereum provider URL:")
+        print("(e.g., https://mainnet.infura.io/v3/YOUR-PROJECT-ID)")
+        provider_url = input("> ")
+        config.set_provider_url(provider_url)
+    
+    # Continue with the rest of your application...
     try:
-        ui.display_header()
-
-        # Initialize configuration
-        if not config_manager.initialize():
-            password = ui.prompt_input("Create a password for configuration encryption:", password=True)
-            confirm = ui.prompt_input("Confirm password:", password=True)
-
-            if password != confirm:
-                ui.display_error("Passwords do not match")
-                return
-
-            if not config_manager.initialize(password):
-                return
-
-        # Initial configuration menu
-        initial_configuration()
-
-        interactive_menu()
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
-    except KeyboardInterrupt:
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+        app = ENSManager(config.eth_provider_url)
+        app.run()
     except Exception as e:
-        ui.display_error(str(e))
+        print(f"Error initializing ENS Manager: {e}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main() 
