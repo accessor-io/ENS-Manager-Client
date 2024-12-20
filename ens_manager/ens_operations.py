@@ -646,9 +646,11 @@ class ENSManager:
             from ens import ENS
             self.w3.ens = ENS.from_web3(self.w3)
         
+        # Store account as instance attribute
+        self.account = None
         if private_key:
-            account = self.w3.eth.account.from_key(private_key)
-            self.w3.eth.default_account = account.address
+            self.account = self.w3.eth.account.from_key(private_key)
+            self.w3.eth.default_account = self.account.address
         
         self.network_manager = NetworkManager()
         self.cross_resolver = CrossNetworkResolver(self.network_manager)

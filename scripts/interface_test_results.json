@@ -1,0 +1,77 @@
+{
+  "timestamp": "2024-12-13T13:17:12.087605",
+  "test_results": {
+    "resolve_name": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:14.034563",
+      "data": {
+        "address": null
+      }
+    },
+    "reverse_resolve": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:15.880603",
+      "data": {
+        "name": null
+      }
+    },
+    "check_availability": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:17.684219",
+      "data": {
+        "available": false
+      }
+    },
+    "get_registration_cost": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:19.510007",
+      "data": {
+        "cost_eth": null
+      }
+    },
+    "get_owner": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:21.380414",
+      "data": {
+        "owner": null
+      }
+    },
+    "get_resolver": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:23.227137",
+      "data": {
+        "resolver": null
+      }
+    },
+    "global_resolution": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:23.227158",
+      "data": {
+        "error": "'NoneType' object has no attribute 'ens'"
+      }
+    },
+    "name_details": {
+      "success": true,
+      "timestamp": "2024-12-13T13:17:46.051178",
+      "data": {
+        "name": "test123.eth",
+        "available": false,
+        "owner": null,
+        "resolver": null,
+        "address": null,
+        "content_hash": null,
+        "text_records": {},
+        "expiry_date": null,
+        "subdomains": [],
+        "estimated_gas_costs": {}
+      }
+    }
+  },
+  "errors": {},
+  "statistics": {
+    "total_tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "error_counts": {}
+  }
+}
