@@ -397,6 +397,48 @@ def manage_subdomains(manager):
             ui.display_error(f"Subdomain management error: {str(e)}")
             ui.pause()
 
+    def manage_notifications():
+    """Manage notification preferences for ENS name expirations."""
+    actions = [
+        "Enable email notifications",
+        "Enable SMS notifications",
+        "Set notification threshold",
+        "Back to main menu"
+    ]
+
+    while True:
+        try:
+            action = ui.create_menu("Notification Management", actions)
+
+            if action == "Back to main menu" or not action:
+                break
+
+            if action == "Enable email notifications":
+                email = ui.prompt_input("Enter your email address:")
+                if email:
+                    config_manager.set_setting('email_notifications', email)
+                    ui.display_success("Email notifications enabled")
+
+            elif action == "Enable SMS notifications":
+                phone = ui.prompt_input("Enter your phone number:")
+                if phone:
+                    config_manager.set_setting('sms_notifications', phone)
+                    ui.display_success("SMS notifications enabled")
+
+            elif action == "Set notification threshold":
+                days = ui.prompt_input("Enter the number of days before expiry to notify (default: 30):")
+                try:
+                    days = int(days) if days else 30
+                    config_manager.set_setting('notification_threshold', days)
+                    ui.display_success(f"Notification threshold set to {days} days")
+                except ValueError:
+                    ui.display_error("Invalid number of days")
+
+            ui.pause()
+        except Exception as e:
+            ui.display_error(f"Notification management error: {str(e)}")
+            ui.pause()
+
 def interactive_menu():
     """Run the interactive menu with enhanced descriptions."""
     actions = [
@@ -413,6 +455,7 @@ def interactive_menu():
         "Manage accounts - Add, remove, or set active accounts",
         "Manage subdomains - Create, delete, or configure subdomains",
         "Transfer ENS name - Transfer ownership of an ENS name",
+        "Manage notifications - Set preferences for ENS name expiry notifications",
         "Exit - Quit the application"
     ]
     
@@ -498,6 +541,10 @@ def interactive_menu():
             
             elif action == "Transfer ENS name":
                 transfer_ens_name(manager)
+                continue
+            
+            elif action == "Manage notifications":
+                manage_notifications()
                 continue
             
             ui.pause()
