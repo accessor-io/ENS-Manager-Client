@@ -35,6 +35,9 @@ class Config:
         }
     }
 
+    def __init__(self):
+        self.config = {}
+
     def validate_url(self, url: str) -> bool:
         """Validate the provided URL."""
         # Add URL validation logic here
@@ -67,6 +70,11 @@ class Config:
         """Set notification settings in the configuration."""
         self.config['notifications'] = notifications
         self._save_config()
+
+    def _save_config(self) -> None:
+        """Save the configuration to a file."""
+        # Add logic to save the configuration to a file
+        pass
 
 class ConfigManager:
     """Manages configuration settings for ENS Manager."""
