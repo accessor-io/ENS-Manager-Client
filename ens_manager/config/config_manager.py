@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional, List
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from datetime import datetime, timedelta
 
 class ConfigManager:
     """Manages configuration settings for ENS Manager."""
@@ -18,6 +19,8 @@ class ConfigManager:
         "QuickNode": "https://api.quicknode.com/{}"
     }
     
+    CONFIG_FILE = Path.home() / ".ens_manager_config.json"
+    
     def __init__(self):
         """Initialize the configuration manager."""
         self.config_dir = Path.home() / '.ens_manager'
@@ -25,24 +28,7 @@ class ConfigManager:
         self.salt_file = self.config_dir / '.salt'
         self.fernet = None
         self._ensure_config_exists()
-        self.config = {}
-
-    def _generate_key(self, password: str) -> bytes:
-        """Generate encryption key from password."""
-        if not self.salt_file.exists():
-            salt = os.urandom(16)
-            self.salt_file.write_bytes(salt)
-        else:
-            salt = self.salt_file.read_bytes()
-
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-        )
-        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
-        return key
+        self.config = self._load_config()
 
     def initialize(self, password: str = None) -> bool:
         """Initialize configuration with password."""
@@ -70,12 +56,17 @@ class ConfigManager:
                     },
                     'default_network': 'mainnet',
                     'accounts': {},
-                    'providers': {}
+                    'providers': {},
+                    'notifications': {},
+                    'ui_theme': 'default',
+                    'security': {
+                        '2fa_enabled': False
+                    }
                 }
-                encrypted_data = self.fernet.encrypt(json.dumps(default_config).encode())
-                self.config_file.write_bytes(encrypted_data)
-            
-            self.config = self._load_config()
+                self.config = default_config
+                self._save_config()
+            else:
+                self.config = self._load_config()
             return True
         except Exception as e:
             print(f"Initialization error: {str(e)}")
@@ -106,6 +97,57 @@ class ConfigManager:
             self.config_file.write_bytes(encrypted_data)
         except Exception as e:
             print(f"Error saving configuration: {str(e)}")
+
+    def add_account(self, label: str, private_key: str) -> bool:
+        """Add an account to the configuration."""
+        try:
+            if 'accounts' not in self.config:
+                self.config['accounts'] = {}
+            self.config['accounts'][label] = {
+                'private_key': private_key
+            }
+            self._save_config()
+            return True
+        except Exception as e:
+            print(f"Error adding account: {str(e)}")
+            return False
+
+    def load_config(self):
+        """Load configuration from a file."""
+        if self.CONFIG_FILE.exists():
+            with open(self.CONFIG_FILE, 'r') as f:
+                self.config = json.load(f)
+
+    def save_config(self):
+        """Save configuration to a file."""
+        with open(self.CONFIG_FILE, 'w') as f:
+            json.dump(self.config, f, indent=4)
+
+    def get_setting(self, key, default=None):
+        """Get a configuration setting."""
+        return self.config.get(key, default)
+
+    def set_setting(self, key, value):
+        """Set a configuration setting."""
+        self.config[key] = value
+        self.save_config()
+
+    def _generate_key(self, password: str) -> bytes:
+        """Generate encryption key from password."""
+        if not self.salt_file.exists():
+            salt = os.urandom(16)
+            self.salt_file.write_bytes(salt)
+        else:
+            salt = self.salt_file.read_bytes()
+
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            iterations=100000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+        return key
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a configuration value."""
@@ -195,3 +237,67 @@ class ConfigManager:
     def get_active_provider(self) -> Optional[str]:
         """Get the name of the active provider."""
         return self.config.get('active_provider')
+
+    def get_account(self):
+        """Get the private key of the active account."""
+        active_account = self.get_active_account()
+        if active_account:
+            return self.config['accounts'].get(active_account, {}).get('private_key')
+        return None
+
+    def list_accounts(self) -> List[str]:
+        """List all configured accounts."""
+        return list(self.config.get('accounts', {}).keys())
+
+    def set_active_account(self, label: str) -> bool:
+        """Set an account as active."""
+        try:
+            if label in self.config.get('accounts', {}):
+                self.config['active_account'] = label
+                self._save_config()
+                return True
+            return False
+        except Exception as e:
+            print(f"Error setting active account: {str(e)}")
+            return False
+
+    def get_active_account(self) -> Optional[str]:
+        """Get the active account."""
+        return self.config.get('active_account')
+
+    def get_account_info(self, label: str) -> Dict[str, Any]:
+        """Get detailed information about an account."""
+        return self.config.get('accounts', {}).get(label, {})
+
+    def add_ens_name(self, name: str, expiry_date: str) -> bool:
+        """Add an ENS name with its expiry date to the configuration."""
+        try:
+            if 'ens_names' not in self.config:
+                self.config['ens_names'] = {}
+            self.config['ens_names'][name] = {
+                'expiry_date': expiry_date
+            }
+            self._save_config()
+            return True
+        except Exception as e:
+            print(f"Error adding ENS name: {str(e)}")
+            return False
+
+    def list_ens_names(self) -> List[str]:
+        """List all tracked ENS names."""
+        return list(self.config.get('ens_names', {}).keys())
+
+    def get_ens_expiry(self, name: str) -> Optional[str]:
+        """Get the expiry date of an ENS name."""
+        return self.config.get('ens_names', {}).get(name, {}).get('expiry_date')
+
+    def check_expiry_notifications(self):
+        """Check for ENS names nearing expiry and trigger notifications."""
+        for name, details in self.config.get('ens_names', {}).items():
+            expiry_date = datetime.strptime(details['expiry_date'], '%Y-%m-%d')
+            if expiry_date - datetime.now() <= timedelta(days=30):
+                self.trigger_notification(name, expiry_date)
+
+    def trigger_notification(self, name: str, expiry_date: datetime):
+        """Trigger a notification for an ENS name nearing expiry."""
+        print(f"Notification: {name} is expiring on {expiry_date.strftime('%Y-%m-%d')}. Consider renewing it.")

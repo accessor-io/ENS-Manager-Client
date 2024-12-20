@@ -18,7 +18,7 @@ import json
 from pathlib import Path
 
 from ens_manager.ens_operations import ENSManager
-from ens_manager.config_manager import ConfigManager
+from ens_manager.config.config_manager import ConfigManager
 from ens_manager.ui_manager import UIManager
 
 ui = UIManager()
@@ -233,7 +233,11 @@ def manage_names():
     """Manage ENS names."""
     actions = [
         "Register new name",
+        "Batch register names",
+        "Bulk register names",
         "Renew name",
+        "Batch renew names",
+        "Bulk renew names",
         "Set resolver",
         "Set address",
         "Set text record",
@@ -279,6 +283,14 @@ def manage_names():
                     if result:
                         ui.display_success(f"Successfully renewed {name} for {duration} years")
                     
+            elif action == "Batch renew names":
+                batch_renew_names(manager)
+                continue
+            
+            elif action == "Bulk renew names":
+                bulk_renew_names(manager)
+                continue
+            
             elif action == "Set resolver":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
@@ -307,9 +319,82 @@ def manage_names():
                             if result:
                                 ui.display_success(f"Successfully set {key} record for {name}")
             
+            elif action == "Batch register names":
+                batch_register_names(manager)
+                continue
+            
+            elif action == "Bulk register names":
+                bulk_register_names(manager)
+                continue
+            
             ui.pause()
         except Exception as e:
             ui.display_error(f"Name management error: {str(e)}")
+            ui.pause()
+
+def manage_subdomains(manager):
+    """Manage ENS subdomains."""
+    actions = [
+        "Create subdomain",
+        "Delete subdomain",
+        "Configure subdomain",
+        "Back to main menu"
+    ]
+
+    while True:
+        try:
+            action = ui.create_menu("Subdomain Management", actions)
+
+            if action == "Back to main menu" or not action:
+                break
+
+            if action == "Create subdomain":
+                domain = ui.prompt_input("Enter primary ENS domain:")
+                if not domain:
+                    continue
+
+                subdomain = ui.prompt_input("Enter subdomain to create:")
+                if subdomain:
+                    result = handle_ens_operation(subdomain, "Creating subdomain", manager.create_subdomain, domain, subdomain)
+                    if result:
+                        ui.display_success(f"Successfully created subdomain {subdomain}.{domain}")
+                    else:
+                        ui.display_error(f"Failed to create subdomain {subdomain}.{domain}")
+
+            elif action == "Delete subdomain":
+                domain = ui.prompt_input("Enter primary ENS domain:")
+                if not domain:
+                    continue
+
+                subdomain = ui.prompt_input("Enter subdomain to delete:")
+                if subdomain:
+                    result = handle_ens_operation(subdomain, "Deleting subdomain", manager.delete_subdomain, domain, subdomain)
+                    if result:
+                        ui.display_success(f"Successfully deleted subdomain {subdomain}.{domain}")
+                    else:
+                        ui.display_error(f"Failed to delete subdomain {subdomain}.{domain}")
+
+            elif action == "Configure subdomain":
+                domain = ui.prompt_input("Enter primary ENS domain:")
+                if not domain:
+                    continue
+
+                subdomain = ui.prompt_input("Enter subdomain to configure:")
+                if subdomain:
+                    config = ui.prompt_input("Enter configuration settings (JSON format):")
+                    try:
+                        config_data = json.loads(config)
+                        result = handle_ens_operation(subdomain, "Configuring subdomain", manager.configure_subdomain, domain, subdomain, config_data)
+                        if result:
+                            ui.display_success(f"Successfully configured subdomain {subdomain}.{domain}")
+                        else:
+                            ui.display_error(f"Failed to configure subdomain {subdomain}.{domain}")
+                    except json.JSONDecodeError:
+                        ui.display_error("Invalid configuration format")
+
+            ui.pause()
+        except Exception as e:
+            ui.display_error(f"Subdomain management error: {str(e)}")
             ui.pause()
 
 def interactive_menu():
@@ -326,6 +411,8 @@ def interactive_menu():
         "Manage networks - Configure network settings",
         "Manage providers - Add, remove, or set active providers",
         "Manage accounts - Add, remove, or set active accounts",
+        "Manage subdomains - Create, delete, or configure subdomains",
+        "Transfer ENS name - Transfer ownership of an ENS name",
         "Exit - Quit the application"
     ]
     
@@ -405,6 +492,14 @@ def interactive_menu():
                     else:
                         ui.display_error(f"No history found for {name}")
             
+            elif action == "Manage subdomains":
+                manage_subdomains(manager)
+                continue
+            
+            elif action == "Transfer ENS name":
+                transfer_ens_name(manager)
+                continue
+            
             ui.pause()
         except Exception as e:
             ui.display_error(f"An error occurred: {str(e)}. Please try again or contact support.")
@@ -466,6 +561,117 @@ def initial_configuration():
         except Exception as e:
             ui.display_error(f"Configuration error: {str(e)}")
             ui.pause()
+
+def batch_register_names(manager):
+    """Register multiple ENS names at once."""
+    names = ui.prompt_input("Enter ENS names to register (comma-separated):")
+    if not names:
+        return
+
+    duration = ui.prompt_input("Enter registration duration in years (default: 1):")
+    try:
+        duration = int(duration) if duration else 1
+    except ValueError:
+        ui.display_error("Invalid duration")
+        return
+
+    name_list = [name.strip() for name in names.split(',')]
+    for name in name_list:
+        result = handle_ens_operation(name, "Registering name", manager.register_name, name, duration)
+        if result:
+            ui.display_success(f"Successfully registered {name} for {duration} years")
+        else:
+            ui.display_error(f"Failed to register {name}")
+
+def batch_renew_names(manager):
+    """Renew multiple ENS names at once."""
+    names = ui.prompt_input("Enter ENS names to renew (comma-separated):")
+    if not names:
+        return
+
+    duration = ui.prompt_input("Enter renewal duration in years (default: 1):")
+    try:
+        duration = int(duration) if duration else 1
+    except ValueError:
+        ui.display_error("Invalid duration")
+        return
+
+    name_list = [name.strip() for name in names.split(',')]
+    for name in name_list:
+        result = handle_ens_operation(name, "Renewing name", manager.renew_name, name, duration)
+        if result:
+            ui.display_success(f"Successfully renewed {name} for {duration} years")
+        else:
+            ui.display_error(f"Failed to renew {name}")
+
+def bulk_register_names(manager):
+    """Bulk register ENS names from a CSV file."""
+    file_path = ui.prompt_input("Enter the path to the CSV file with ENS names:")
+    if not file_path or not os.path.exists(file_path):
+        ui.display_error("Invalid file path")
+        return
+
+    duration = ui.prompt_input("Enter registration duration in years (default: 1):")
+    try:
+        duration = int(duration) if duration else 1
+    except ValueError:
+        ui.display_error("Invalid duration")
+        return
+
+    with open(file_path, 'r') as file:
+        names = file.read().splitlines()
+
+    for name in names:
+        result = handle_ens_operation(name, "Bulk registering name", manager.register_name, name, duration)
+        if result:
+            ui.display_success(f"Successfully registered {name} for {duration} years")
+        else:
+            ui.display_error(f"Failed to register {name}")
+
+def bulk_renew_names(manager):
+    """Bulk renew ENS names from a CSV file."""
+    file_path = ui.prompt_input("Enter the path to the CSV file with ENS names:")
+    if not file_path or not os.path.exists(file_path):
+        ui.display_error("Invalid file path")
+        return
+
+    duration = ui.prompt_input("Enter renewal duration in years (default: 1):")
+    try:
+        duration = int(duration) if duration else 1
+    except ValueError:
+        ui.display_error("Invalid duration")
+        return
+
+    with open(file_path, 'r') as file:
+        names = file.read().splitlines()
+
+    for name in names:
+        result = handle_ens_operation(name, "Bulk renewing name", manager.renew_name, name, duration)
+        if result:
+            ui.display_success(f"Successfully renewed {name} for {duration} years")
+        else:
+            ui.display_error(f"Failed to renew {name}")
+
+def transfer_ens_name(manager):
+    """Transfer ownership of an ENS name to another account."""
+    name = ui.prompt_input("Enter ENS name to transfer:")
+    if not name:
+        return
+
+    recipient = ui.prompt_input("Enter recipient Ethereum address:")
+    if not recipient:
+        return
+
+    confirm = ui.confirm(f"Are you sure you want to transfer {name} to {recipient}?")
+    if not confirm:
+        ui.display_warning("Transfer cancelled")
+        return
+
+    result = handle_ens_operation(name, "Transferring ENS name", manager.transfer_name, name, recipient)
+    if result:
+        ui.display_success(f"Successfully transferred {name} to {recipient}")
+    else:
+        ui.display_error(f"Failed to transfer {name}")
 
 @click.command()
 def main():
