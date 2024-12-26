@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "ens-manager"
+version = "0.1.0"
+description = "A command-line tool for managing ENS domains"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8.1"
+web3 = "^6.0.0"
+click = "^8.1.0"
+eth-account = "^0.9.0"
+eth-utils = "^2.1.0"
+aiohttp = "^3.8.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+pytest-asyncio = "^0.21.0"
+black = "^23.3.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ens-manager = "src.cli.cli:cli"

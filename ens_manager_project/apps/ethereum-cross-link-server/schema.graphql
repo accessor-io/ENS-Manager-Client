@@ -1,0 +1,256 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AddressRegistry {
+  createdAt: DateTime!
+  id: String!
+  registryAddress: String
+  registryName: String
+  updatedAt: DateTime!
+}
+
+input AddressRegistryCreateInput {
+  registryAddress: String
+  registryName: String
+}
+
+input AddressRegistryOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  registryAddress: SortOrder
+  registryName: SortOrder
+  updatedAt: SortOrder
+}
+
+input AddressRegistryUpdateInput {
+  registryAddress: String
+  registryName: String
+}
+
+input AddressRegistryWhereInput {
+  id: StringFilter
+  registryAddress: StringNullableFilter
+  registryName: StringNullableFilter
+}
+
+input AddressRegistryWhereUniqueInput {
+  id: String!
+}
+
+type AttestationManager {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input AttestationManagerOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input AttestationManagerWhereInput {
+  id: StringFilter
+}
+
+input AttestationManagerWhereUniqueInput {
+  id: String!
+}
+
+type CcipCrossChainBridge {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input CcipCrossChainBridgeOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input CcipCrossChainBridgeWhereInput {
+  id: StringFilter
+}
+
+input CcipCrossChainBridgeWhereUniqueInput {
+  id: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Governor {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input GovernorOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input GovernorWhereInput {
+  id: StringFilter
+}
+
+input GovernorWhereUniqueInput {
+  id: String!
+}
+
+type Mutation {
+  createAddressRegistry(data: AddressRegistryCreateInput!): AddressRegistry!
+  deleteAddressRegistry(where: AddressRegistryWhereUniqueInput!): AddressRegistry!
+  deleteAttestationManager(where: AttestationManagerWhereUniqueInput!): AttestationManager!
+  deleteCcipCrossChainBridge(where: CcipCrossChainBridgeWhereUniqueInput!): CcipCrossChainBridge!
+  deleteGovernor(where: GovernorWhereUniqueInput!): Governor!
+  deleteOracle(where: OracleWhereUniqueInput!): Oracle!
+  deleteProjectRegistry(where: ProjectRegistryWhereUniqueInput!): ProjectRegistry!
+  deleteRegistry(where: RegistryWhereUniqueInput!): Registry!
+  deleteResolver(where: ResolverWhereUniqueInput!): Resolver!
+  updateAddressRegistry(data: AddressRegistryUpdateInput!, where: AddressRegistryWhereUniqueInput!): AddressRegistry!
+}
+
+type Oracle {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input OracleOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input OracleWhereInput {
+  id: StringFilter
+}
+
+input OracleWhereUniqueInput {
+  id: String!
+}
+
+type ProjectRegistry {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input ProjectRegistryOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input ProjectRegistryWhereInput {
+  id: StringFilter
+}
+
+input ProjectRegistryWhereUniqueInput {
+  id: String!
+}
+
+type Query {
+  addressRegistries(orderBy: [AddressRegistryOrderByInput!], skip: Float, take: Float, where: AddressRegistryWhereInput): [AddressRegistry!]!
+  addressRegistry(where: AddressRegistryWhereUniqueInput!): AddressRegistry
+  attestationManager(where: AttestationManagerWhereUniqueInput!): AttestationManager
+  attestationManagers(orderBy: [AttestationManagerOrderByInput!], skip: Float, take: Float, where: AttestationManagerWhereInput): [AttestationManager!]!
+  ccipCrossChainBridge(where: CcipCrossChainBridgeWhereUniqueInput!): CcipCrossChainBridge
+  ccipCrossChainBridges(orderBy: [CcipCrossChainBridgeOrderByInput!], skip: Float, take: Float, where: CcipCrossChainBridgeWhereInput): [CcipCrossChainBridge!]!
+  governor(where: GovernorWhereUniqueInput!): Governor
+  governors(orderBy: [GovernorOrderByInput!], skip: Float, take: Float, where: GovernorWhereInput): [Governor!]!
+  oracle(where: OracleWhereUniqueInput!): Oracle
+  oracles(orderBy: [OracleOrderByInput!], skip: Float, take: Float, where: OracleWhereInput): [Oracle!]!
+  projectRegistries(orderBy: [ProjectRegistryOrderByInput!], skip: Float, take: Float, where: ProjectRegistryWhereInput): [ProjectRegistry!]!
+  projectRegistry(where: ProjectRegistryWhereUniqueInput!): ProjectRegistry
+  registries(orderBy: [RegistryOrderByInput!], skip: Float, take: Float, where: RegistryWhereInput): [Registry!]!
+  registry(where: RegistryWhereUniqueInput!): Registry
+  resolver(where: ResolverWhereUniqueInput!): Resolver
+  resolvers(orderBy: [ResolverOrderByInput!], skip: Float, take: Float, where: ResolverWhereInput): [Resolver!]!
+}
+
+enum QueryMode {
+  Default
+  Insensitive
+}
+
+type Registry {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input RegistryOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input RegistryWhereInput {
+  id: StringFilter
+}
+
+input RegistryWhereUniqueInput {
+  id: String!
+}
+
+type Resolver {
+  createdAt: DateTime!
+  id: String!
+  updatedAt: DateTime!
+}
+
+input ResolverOrderByInput {
+  createdAt: SortOrder
+  id: SortOrder
+  updatedAt: SortOrder
+}
+
+input ResolverWhereInput {
+  id: StringFilter
+}
+
+input ResolverWhereUniqueInput {
+  id: String!
+}
+
+enum SortOrder {
+  Asc
+  Desc
+}
+
+input StringFilter {
+  contains: String
+  endsWith: String
+  equals: String
+  gt: String
+  gte: String
+  in: [String!]
+  lt: String
+  lte: String
+  mode: QueryMode
+  not: String
+  notIn: [String!]
+  startsWith: String
+}
+
+input StringNullableFilter {
+  contains: String
+  endsWith: String
+  equals: String
+  gt: String
+  gte: String
+  in: [String!]
+  lt: String
+  lte: String
+  mode: QueryMode
+  not: String
+  notIn: [String!]
+  startsWith: String
+}

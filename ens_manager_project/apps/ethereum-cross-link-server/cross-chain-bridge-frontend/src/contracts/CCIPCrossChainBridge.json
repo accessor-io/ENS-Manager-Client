@@ -1,0 +1,8 @@
+{
+  "abi": [],
+  "networks": {
+    "network_id": {
+      "address": "contract_address"
+    }
+  }
+}

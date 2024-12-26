@@ -1,0 +1,48 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_data",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_destinationChain",
+        "type": "string"
+      }
+    ],
+    "name": "sendData",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "_destinationChain",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "_customData",
+        "type": "bytes"
+      }
+    ],
+    "name": "initiateTransfer",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  }
+]

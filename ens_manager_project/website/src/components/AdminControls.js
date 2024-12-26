@@ -1,0 +1,11 @@
+import React from 'react';
+
+const AdminControls = ({ isAdmin, onEdit }) => {
+  if (!isAdmin) return null;
+
+  return (
+    <button onClick={onEdit}>Edit Attestation</button>
+  );
+};
+
+export default AdminControls;
