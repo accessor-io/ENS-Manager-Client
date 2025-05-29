@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Internet :: Name Service (DNS)",
     "Topic :: Utilities"
 ]
-packages = [{ include = "src" }]
+packages = [{ include = "ens_manager" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -51,4 +51,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-ens-manager = "src.cli:main"
+ens-manager = "ens_manager.cli:main"
