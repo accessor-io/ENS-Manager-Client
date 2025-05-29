@@ -195,3 +195,71 @@ class ConfigManager:
     def get_active_provider(self) -> Optional[str]:
         """Get the name of the active provider."""
         return self.config.get('active_provider')
+
+    def list_accounts(self) -> List[str]:
+        """List configured accounts."""
+        return list(self.config.get('accounts', {}).keys())
+
+    def add_account(self, name: str, private_key: str) -> bool:
+        """Add a new Ethereum account (stored encrypted)."""
+        try:
+            if 'accounts' not in self.config:
+                self.config['accounts'] = {}
+            # Prevent overwriting existing account label
+            if name in self.config['accounts']:
+                return False
+            self.config['accounts'][name] = {
+                'private_key': private_key,
+            }
+            self._save_config()
+            return True
+        except Exception as e:
+            print(f"Error adding account: {str(e)}")
+            return False
+
+    def remove_account(self, name: str) -> bool:
+        """Remove an account configuration by label."""
+        try:
+            if name in self.config.get('accounts', {}):
+                del self.config['accounts'][name]
+                # If it was the active account, clear it
+                if self.config.get('active_account') == name:
+                    self.config.pop('active_account', None)
+                self._save_config()
+                return True
+            return False
+        except Exception as e:
+            print(f"Error removing account: {str(e)}")
+            return False
+
+    def set_active_account(self, name: str) -> bool:
+        """Set the active account by label."""
+        if name in self.config.get('accounts', {}):
+            self.config['active_account'] = name
+            self._save_config()
+            return True
+        return False
+
+    def get_active_account(self) -> Optional[str]:
+        """Return the label of the active account, if set."""
+        return self.config.get('active_account')
+
+    def get_account(self, name: Optional[str] = None) -> Optional[str]:
+        """Return the private key for a named or active account."""
+        accounts = self.config.get('accounts', {})
+        if not name:
+            name = self.get_active_account()
+        return accounts.get(name, {}).get('private_key') if name else None
+
+    def get_account_info(self, name: str) -> Dict[str, Any]:
+        """Return stored info for a given account label."""
+        return self.config.get('accounts', {}).get(name, {})
+
+    def display_config_status(self):
+        """Pretty-print current configuration using UIManager."""
+        try:
+            from .ui_manager import UIManager  # local import to avoid circular deps
+            ui = UIManager()
+            ui.display_config_status(self.config)
+        except Exception as e:
+            print(f"Error displaying config status: {str(e)}")
