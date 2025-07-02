@@ -58,6 +58,11 @@ class UIManager:
             box=box.DOUBLE
         )
         self.console.print(header)
+    
+    def display_simple_title(self):
+        """Display a simple title without the full banner."""
+        self.console.print("[bold blue]ENS Manager[/bold blue]", justify="center")
+        self.console.print("[dim]─" * 50 + "[/dim]", justify="center")
         
     def create_menu(self, title: str, options: List[str]) -> Optional[str]:
         """Create an interactive menu with enhanced styling."""

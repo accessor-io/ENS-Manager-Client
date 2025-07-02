@@ -264,7 +264,9 @@ def interactive_menu():
     
     while True:
         try:
-            ui.display_header()
+            # Clear screen and show a simple title
+            ui.console.clear()
+            ui.display_simple_title()
             action = ui.create_menu("What would you like to do?", actions)
             
             if action == "Exit" or not action:
