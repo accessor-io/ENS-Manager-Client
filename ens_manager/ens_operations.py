@@ -1023,22 +1023,72 @@ class ENSManager:
     def check_name_available(self, name: str) -> bool:
         """Check if an ENS name is available for registration."""
         try:
+            # Validate inputs
+            if not name or not name.strip():
+                return False
+                
             # Remove .eth suffix if present
-            name = name.lower().replace('.eth', '')
+            name = name.lower().replace('.eth', '').strip()
+            
+            # Validate name length (ENS names must be at least 3 characters)
+            if len(name) < 3:
+                print(f"Name '{name}' is too short (minimum 3 characters)")
+                return False
+            
+            # Check if controller is properly initialized
+            if not hasattr(self, 'controller') or not self.controller:
+                print("ENS Controller not properly initialized")
+                return False
+            
             return self.controller.functions.available(name).call()
         except Exception as e:
             print(f"Error checking availability for {name}: {e}")
+            if "execution reverted" in str(e).lower():
+                print("Contract execution reverted - name might be invalid")
+            elif "timeout" in str(e).lower():
+                print("Request timed out - network connection issues")
             return False
 
     def get_registration_cost(self, name: str, duration_years: int = 1) -> Optional[float]:
         """Get the cost in ETH to register a name."""
         try:
+            # Validate inputs
+            if not name or not name.strip():
+                return None
+                
             # Remove .eth suffix if present
-            name = name.lower().replace('.eth', '')
+            name = name.lower().replace('.eth', '').strip()
+            
+            # Validate name length (ENS names must be at least 3 characters)
+            if len(name) < 3:
+                print(f"Name '{name}' is too short (minimum 3 characters)")
+                return None
+            
             duration = duration_years * 31536000  # Convert years to seconds
-            wei_cost = self.controller.functions.rentPrice(name, duration).call()
-            eth_cost = self.w3.from_wei(wei_cost, 'ether')
-            return float(eth_cost)
+            
+            # Add timeout and better error handling
+            try:
+                # Check if controller is properly initialized
+                if not hasattr(self, 'controller') or not self.controller:
+                    print("ENS Controller not properly initialized")
+                    return None
+                
+                # Call with timeout
+                wei_cost = self.controller.functions.rentPrice(name, duration).call()
+                eth_cost = self.w3.from_wei(wei_cost, 'ether')
+                return float(eth_cost)
+                
+            except Exception as contract_error:
+                print(f"Contract call failed for {name}: {contract_error}")
+                # Try to provide a fallback estimation
+                if "execution reverted" in str(contract_error).lower():
+                    print("Contract execution reverted - name might be invalid or unavailable")
+                elif "timeout" in str(contract_error).lower():
+                    print("Request timed out - network connection issues")
+                else:
+                    print(f"Unknown contract error: {contract_error}")
+                return None
+                
         except Exception as e:
             print(f"Error getting registration cost for {name}: {e}")
             return None

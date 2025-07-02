@@ -33,14 +33,45 @@ def init_manager() -> Optional[ENSManager]:
         ui.display_error(f"Failed to initialize manager: {str(e)}")
         return None
 
-def handle_ens_operation(name: str, operation_name: str, operation_func, *args):
+def handle_ens_operation(name: str, operation_name: str, operation_func, *args, timeout: int = 30):
     """Handle ENS operations with proper loading and error handling."""
+    import threading
+    import time
+    
+    result_container = {"result": None, "error": None, "completed": False}
+    
+    def worker():
+        try:
+            result_container["result"] = operation_func(*args)
+            result_container["completed"] = True
+        except Exception as e:
+            result_container["error"] = e
+            result_container["completed"] = True
+    
     try:
         with ui.display_loading(f"{operation_name}...") as progress:
             task = progress.add_task("Processing...", total=None)
-            result = operation_func(*args)
             
-        return result
+            # Start the operation in a separate thread
+            thread = threading.Thread(target=worker)
+            thread.daemon = True
+            thread.start()
+            
+            # Wait for completion or timeout
+            start_time = time.time()
+            while not result_container["completed"] and (time.time() - start_time) < timeout:
+                time.sleep(0.1)
+                progress.update(task, advance=1)
+            
+            if not result_container["completed"]:
+                ui.display_error(f"Operation timed out after {timeout} seconds")
+                ui.display_warning("This might be due to network issues or provider problems")
+                return None
+            
+            if result_container["error"]:
+                raise result_container["error"]
+            
+        return result_container["result"]
     except Exception as e:
         ui.display_error(f"Operation failed: {str(e)}")
         return None
@@ -390,34 +421,27 @@ def manage_names():
                     continue
                     
                 # Check availability
-                with ui.display_loading("Checking availability...") as progress:
-                    task = progress.add_task("Checking...", total=None)
-                    try:
-                        available = manager.check_name_available(name)
-                    except Exception as e:
-                        ui.display_error(f"Could not check availability: {e}")
-                        continue
+                available = handle_ens_operation(name, "Checking availability", manager.check_name_available, name, timeout=10)
+                if available is None:
+                    ui.display_error("Could not check availability - operation failed or timed out")
+                    ui.pause()
+                    continue
                 
-                if not available:
+                if available is False:
                     ui.display_error(f"{name}.eth is not available")
                     ui.pause()
                     continue
                 
                 # Get registration cost
-                with ui.display_loading("Getting registration cost...") as progress:
-                    task = progress.add_task("Calculating...", total=None)
-                    duration = ui.prompt_input("Enter registration duration in years (default: 1):")
-                    duration = int(duration) if duration.isdigit() else 1
-                    try:
-                        cost = manager.get_registration_cost(name, duration)
-                    except Exception as e:
-                        ui.display_error(f"Could not get cost: {e}")
-                        continue
+                duration = ui.prompt_input("Enter registration duration in years (default: 1):")
+                duration = int(duration) if duration.isdigit() else 1
                 
+                cost = handle_ens_operation(name, "Getting registration cost", manager.get_registration_cost, name, duration, timeout=15)
                 if cost is None:
-                    ui.display_error("Could not get registration cost")
+                    ui.display_error("Could not get registration cost - operation failed or timed out")
                     ui.pause()
                     continue
+
                 
                 if not ui.confirm(f"Registration will cost {cost} ETH. Proceed?"):
                     continue
