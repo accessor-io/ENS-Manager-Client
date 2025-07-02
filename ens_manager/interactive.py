@@ -222,7 +222,7 @@ def interactive_menu():
         "Get owner",
         "Get resolver", 
         "Get expiration date",
-        "Get text record",
+        "Get text records",
         "View name history",
         "Manage names",
         "Manage networks",
@@ -312,16 +312,42 @@ def interactive_menu():
                     else:
                         ui.display_error(f"Could not get expiration date for {name}")
                         
-            elif action == "Get text record":
+            elif action == "Get text records":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
-                    key = ui.prompt_input("Enter text record key (e.g., email, url, avatar):")
-                    if key:
-                        value = handle_ens_operation(name, "Getting text record", manager.get_text_record, name, key)
-                        if value:
-                            ui.display_success(f"{key} record for {name}: {value}")
+                    # Ask user if they want all records or a specific one
+                    record_action = ui.create_menu(
+                        "Text Record Options:",
+                        ["Show all text records", "Get specific text record", "Cancel"]
+                    )
+                    
+                    if record_action == "Show all text records":
+                        text_records = handle_ens_operation(name, "Getting text records", manager.get_all_text_records, name)
+                        if text_records:
+                            # Display in a nice table format
+                            from rich.table import Table
+                            table = Table(title=f"Text Records for {name}")
+                            table.add_column("Key", style="cyan", width=20)
+                            table.add_column("Value", style="green", width=60)
+                            
+                            for key, value in text_records.items():
+                                # Truncate long values for display
+                                display_value = value if len(value) <= 60 else f"{value[:57]}..."
+                                table.add_row(key, display_value)
+                            
+                            ui.console.print(table)
+                            ui.display_success(f"Found {len(text_records)} text records for {name}")
                         else:
-                            ui.display_error(f"Could not get {key} record for {name}")
+                            ui.display_warning(f"No text records found for {name}")
+                    
+                    elif record_action == "Get specific text record":
+                        key = ui.prompt_input("Enter text record key (e.g., email, url, avatar, com.twitter):")
+                        if key:
+                            value = handle_ens_operation(name, f"Getting {key} record", manager.get_text_record, name, key)
+                            if value:
+                                ui.display_success(f"{key} record for {name}: {value}")
+                            else:
+                                ui.display_error(f"Could not get {key} record for {name}")
                             
             elif action == "View name history":
                 name = ui.prompt_input("Enter ENS name:")

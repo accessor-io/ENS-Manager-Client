@@ -748,6 +748,40 @@ class ENSManager:
             print(f"Error getting text record for {name}: {e}")
             return None
 
+    def get_all_text_records(self, name: str) -> Dict[str, str]:
+        """Get all text records for ENS name."""
+        try:
+            resolver = self.w3.ens.resolver(name)
+            if not resolver:
+                return {}
+            
+            # Common text record keys
+            common_keys = [
+                'email', 'url', 'avatar', 'description', 'notice', 'keywords',
+                'com.twitter', 'com.github', 'com.discord', 'com.reddit',
+                'com.telegram', 'org.telegram', 'com.linkedin', 'com.youtube',
+                'com.instagram', 'com.facebook', 'com.medium', 'location',
+                'phone', 'name', 'display', 'header', 'snapshot', 'vnd.twitter',
+                'vnd.github', 'vnd.discord', 'vnd.reddit', 'vnd.telegram'
+            ]
+            
+            text_records = {}
+            node = self.w3.ens.namehash(name)
+            
+            for key in common_keys:
+                try:
+                    value = resolver.functions.text(node, key).call()
+                    if value and value.strip():  # Only include non-empty values
+                        text_records[key] = value
+                except Exception:
+                    # Skip keys that cause errors
+                    continue
+            
+            return text_records
+        except Exception as e:
+            print(f"Error getting text records for {name}: {e}")
+            return {}
+
     def get_content_hash(self, name: str) -> Optional[str]:
         """Get content hash for ENS name."""
         try:
