@@ -1531,30 +1531,36 @@ def interactive_menu():
             ui.display_error(f"Operation failed: {str(e)}")
             ui.pause()
 
-@click.command()
 def main():
     """ENS Manager - Ethereum Name Service Management Tool."""
-    try:
-        ui.display_header()
-        
-        # Initialize configuration
-        if not config_manager.initialize():
-            password = ui.prompt_input("Create a password for configuration encryption:", password=True)
-            confirm = ui.prompt_input("Confirm password:", password=True)
+    import sys
+    
+    # If no arguments provided, run interactive mode
+    if len(sys.argv) == 1:
+        try:
+            ui.display_header()
             
-            if password != confirm:
-                ui.display_error("Passwords do not match")
-                return
+            # Initialize configuration
+            if not config_manager.initialize():
+                password = ui.prompt_input("Create a password for configuration encryption:", password=True)
+                confirm = ui.prompt_input("Confirm password:", password=True)
                 
-            if not config_manager.initialize(password):
-                return
-        
-        interactive_menu()
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
-    except KeyboardInterrupt:
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
-    except Exception as e:
-        ui.display_error(str(e))
+                if password != confirm:
+                    ui.display_error("Passwords do not match")
+                    return
+                    
+                if not config_manager.initialize(password):
+                    return
+            
+            interactive_menu()
+            ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+        except KeyboardInterrupt:
+            ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+        except Exception as e:
+            ui.display_error(str(e))
+    else:
+        # Run CLI commands through Click
+        cli()
 
 if __name__ == '__main__':
     main()

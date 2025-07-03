@@ -263,3 +263,4 @@ class ConfigManager:
             ui.display_config_status(self.config)
         except Exception as e:
             print(f"Error displaying config status: {str(e)}")
+            

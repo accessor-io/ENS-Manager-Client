@@ -17,27 +17,29 @@ from typing import List, Dict, Any, Optional
 
 # Custom theme for consistent styling
 THEME = Theme({
-    "info": "cyan",
-    "warning": "yellow",
-    "error": "red bold",
-    "success": "green bold",
-    "header": "blue bold",
-    "subheader": "cyan",
-    "highlight": "magenta",
-    "dim": "grey70",
-    "accent": "yellow bold",
+    "info": "bright_cyan",
+    "warning": "bright_yellow",
+    "error": "bright_red bold",
+    "success": "bright_green bold",
+    "header": "bright_blue bold",
+    "subheader": "bright_cyan",
+    "highlight": "bright_magenta",
+    "dim": "grey50",
+    "accent": "bright_yellow bold",
 })
 
-# Custom questionary style
+# Enhanced questionary style with better colors and contrast
 QUESTIONARY_STYLE = questionary.Style([
-    ('qmark', 'fg:yellow bold'),
-    ('question', 'fg:blue bold'),
-    ('answer', 'fg:green bold'),
-    ('pointer', 'fg:yellow bold'),
-    ('highlighted', 'fg:yellow bold'),
-    ('selected', 'fg:white bg:blue'),
-    ('separator', 'fg:black'),
-    ('instruction', 'fg:black'),
+    ('qmark', 'fg:#61afef bold'),           # Bright blue question mark
+    ('question', 'fg:#e06c75 bold'),        # Bright red question text
+    ('answer', 'fg:#98c379 bold'),          # Bright green answer
+    ('pointer', 'fg:#e5c07b bold'),         # Bright yellow pointer
+    ('highlighted', 'fg:#e5c07b bold'),     # Bright yellow highlighted
+    ('selected', 'fg:#282c34 bg:#61afef'),  # Dark text on blue background
+    ('separator', 'fg:#5c6370'),           # Grey separator
+    ('instruction', 'fg:#abb2bf'),         # Light grey instruction
+    ('text', 'fg:#abb2bf'),                # Light grey text
+    ('disabled', 'fg:#5c6370'),            # Grey disabled
 ])
 
 class UIManager:
@@ -61,20 +63,35 @@ class UIManager:
     
     def display_simple_title(self):
         """Display a simple title without the full banner."""
-        self.console.print("[bold blue]ENS Manager[/bold blue]", justify="center")
-        self.console.print("[dim]─" * 50 + "[/dim]", justify="center")
+        self.console.print()  # Add some spacing
+        self.console.print("[header]ENS Manager[/header]", justify="center")
+        self.console.print("[dim]─" * 60 + "[/dim]", justify="center")
+        self.console.print()  # Add some spacing
         
     def create_menu(self, title: str, options: List[str]) -> Optional[str]:
         """Create an interactive menu with enhanced styling."""
         try:
+            # Add some visual spacing
+            self.console.print()
+            
             result = questionary.select(
                 title,
                 choices=options,
                 style=QUESTIONARY_STYLE,
                 qmark="🔹",
-                instruction="(Use arrow keys and Enter to select)"
+                instruction="(Use arrow keys and Enter to select)",
+                show_selected=True
             ).ask()
+            
+            # Add spacing after selection
+            if result:
+                self.console.print()
+                
             return result
+        except KeyboardInterrupt:
+            # Handle Ctrl+C gracefully
+            self.console.print("\n[warning]Operation cancelled by user[/warning]")
+            return None
         except Exception as e:
             self.display_error(f"Menu error: {str(e)}")
             return None
@@ -205,7 +222,11 @@ class UIManager:
         
     def display_warning(self, message: str):
         """Display a warning message."""
-        self.console.print(f"[warning]![/warning] {message}")
+        self.console.print(f"[warning]⚠[/warning] {message}")
+        
+    def display_info(self, message: str):
+        """Display an info message."""
+        self.console.print(f"[info]ℹ[/info] {message}")
         
     def display_history(self, history: List[Dict[str, Any]], name: str):
         """Display ENS name history with enhanced styling."""

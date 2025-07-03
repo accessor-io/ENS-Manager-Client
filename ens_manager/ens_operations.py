@@ -153,13 +153,24 @@ CCIP_READ_INTERFACE = {
 class NetworkManager:
     """Manage connections to different EVM networks."""
     
-    def __init__(self):
+    def __init__(self, mainnet_provider_url: Optional[str] = None):
         """Initialize network connections."""
         self.connections = {}
         self.current_network = 'mainnet'
         
-        # Initialize connections for each network
+        # If mainnet provider URL is provided, use it for mainnet
+        if mainnet_provider_url:
+            try:
+                web3 = Web3(Web3.HTTPProvider(mainnet_provider_url))
+                if web3.is_connected():
+                    self.connections['mainnet'] = web3
+            except Exception as e:
+                print(f"Failed to connect to mainnet: {e}")
+        
+        # Initialize connections for other networks from environment variables
         for network, config in NETWORK_CONFIGS.items():
+            if network == 'mainnet' and mainnet_provider_url:
+                continue  # Already handled above
             rpc_url = os.getenv(config['rpc_env_var'])
             if rpc_url:
                 try:
@@ -193,6 +204,8 @@ class CrossNetworkResolver:
         """Initialize resolver."""
         self.network_manager = network_manager
         self.mainnet_web3 = network_manager.get_web3('mainnet')
+        if not self.mainnet_web3:
+            raise ValueError("Mainnet connection required for cross-network resolution")
     
     def get_network_specific_address(self, name: str, network: str) -> Optional[str]:
         """Get network-specific resolution for an ENS name."""
@@ -386,6 +399,8 @@ class GlobalResolver:
         """Initialize global resolver."""
         self.network_manager = network_manager
         self.mainnet_web3 = network_manager.get_web3('mainnet')
+        if not self.mainnet_web3:
+            raise ValueError("Mainnet connection required for global resolution")
         
         # Cache for resolution results
         self.resolution_cache = {}
@@ -644,6 +659,10 @@ class ENSManager:
         self.w3 = Web3(Web3.HTTPProvider(self.provider_url))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         
+        # Check connection
+        if not self.w3.is_connected():
+            raise ValueError("Could not connect to Ethereum provider")
+        
         # Initialize ENS
         self.ns = self.w3.ens
         
@@ -667,36 +686,66 @@ class ENSManager:
         self.activity_tracker = ENSActivity()
         self.etherscan_api_key = os.getenv('ETHERSCAN_API_KEY')
 
-        self.network_manager = NetworkManager()
-        self.cross_resolver = CrossNetworkResolver(self.network_manager)
-        self.global_resolver = GlobalResolver(self.network_manager)
+        # Initialize network components but make them optional
+        try:
+            self.network_manager = NetworkManager(self.provider_url)
+            self.cross_resolver = CrossNetworkResolver(self.network_manager)
+            self.global_resolver = GlobalResolver(self.network_manager)
+        except Exception as e:
+            print(f"Warning: Network features unavailable: {e}")
+            self.network_manager = None
+            self.cross_resolver = None
+            self.global_resolver = None
 
     def resolve_name(self, name: str, network: Optional[str] = None) -> Optional[str]:
-        """Resolve ENS name to address on specified network."""
-        if network is None:
-            network = self.network_manager.current_network
-        
-        return self.cross_resolver.get_network_specific_address(name, network)
+        """Resolve ENS name to address."""
+        try:
+            # Use direct ENS resolution for mainnet/default
+            if network is None or network == 'mainnet':
+                address = self.w3.ens.address(name)
+                return address if address else None
+            
+            # Use cross-network resolver if available
+            if self.cross_resolver:
+                return self.cross_resolver.get_network_specific_address(name, network)
+            else:
+                # Fallback to mainnet resolution
+                address = self.w3.ens.address(name)
+                return address if address else None
+                
+        except Exception as e:
+            print(f"Error resolving {name} on {network or 'mainnet'}: {e}")
+            return None
     
     def set_network_resolution(self, name: str, network: str, address: str) -> Tuple[bool, str]:
         """Set network-specific resolution for an ENS name."""
-        return self.cross_resolver.set_network_address(name, network, address)
+        if self.cross_resolver:
+            return self.cross_resolver.set_network_address(name, network, address)
+        else:
+            return False, "Network features not available"
     
     def get_all_resolutions(self, name: str) -> Dict[str, Optional[str]]:
         """Get all network resolutions for an ENS name."""
-        return self.cross_resolver.get_all_network_addresses(name)
+        if self.cross_resolver:
+            return self.cross_resolver.get_all_network_addresses(name)
+        else:
+            # Fallback to mainnet only
+            return {'mainnet': self.resolve_name(name)}
     
     def validate_network_setup(self, name: str) -> List[str]:
         """Validate network configuration for an ENS name."""
-        return self.cross_resolver.validate_network_setup(name)
+        if self.cross_resolver:
+            return self.cross_resolver.validate_network_setup(name)
+        else:
+            return ["Network features not available"]
     
     def get_available_networks(self) -> List[str]:
         """Get list of available networks."""
-        return self.network_manager.get_available_networks()
+        return self.network_manager.get_available_networks() if self.network_manager else []
     
     def set_network(self, network: str) -> bool:
         """Set current network for operations."""
-        return self.network_manager.set_current_network(network)
+        return self.network_manager.set_current_network(network) if self.network_manager else False
 
     def reverse_resolve(self, address: str) -> Optional[str]:
         """Reverse resolve Ethereum address to ENS name."""
@@ -740,10 +789,8 @@ class ENSManager:
     def get_text_record(self, name: str, key: str) -> Optional[str]:
         """Get text record for ENS name."""
         try:
-            resolver = self.w3.ens.resolver(name)
-            if not resolver:
-                return None
-            return resolver.functions.text(self.w3.ens.namehash(name), key).call()
+            records = self.get_all_text_records(name)
+            return records.get(key)
         except Exception as e:
             print(f"Error getting text record for {name}: {e}")
             return None
@@ -755,28 +802,27 @@ class ENSManager:
             if not resolver:
                 return {}
             
-            # Common text record keys
-            common_keys = [
-                'email', 'url', 'avatar', 'description', 'notice', 'keywords',
-                'com.twitter', 'com.github', 'com.discord', 'com.reddit',
-                'com.telegram', 'org.telegram', 'com.linkedin', 'com.youtube',
-                'com.instagram', 'com.facebook', 'com.medium', 'location',
-                'phone', 'name', 'display', 'header', 'snapshot', 'vnd.twitter',
-                'vnd.github', 'vnd.discord', 'vnd.reddit', 'vnd.telegram'
-            ]
-            
             text_records = {}
             node = self.w3.ens.namehash(name)
             
-            for key in common_keys:
+            # Get TextChanged events to find all keys
+            text_changed_event = resolver.events.TextChanged()
+            text_events = text_changed_event.get_all_entries()
+            
+            # Extract unique keys from events
+            keys = set()
+            for event in text_events:
+                keys.add(event['args']['key'])
+            
+            # Get values for all keys
+            for key in keys:
                 try:
                     value = resolver.functions.text(node, key).call()
                     if value and value.strip():  # Only include non-empty values
                         text_records[key] = value
                 except Exception:
-                    # Skip keys that cause errors
                     continue
-            
+                    
             return text_records
         except Exception as e:
             print(f"Error getting text records for {name}: {e}")
