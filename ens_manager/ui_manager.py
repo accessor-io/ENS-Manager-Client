@@ -12,8 +12,11 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.live import Live
 from rich.align import Align
 from rich import box
+import time
+import random
 import questionary
 from typing import List, Dict, Any, Optional
+from pyfiglet import figlet_format
 
 # Custom theme for consistent styling
 THEME = Theme({
@@ -49,17 +52,99 @@ class UIManager:
         """Initialize UI Manager."""
         self.console = Console(theme=THEME)
         
-    def display_header(self):
-        """Display application header."""
-        header = Panel(
-            Align(
-                Text("ENS Manager", style="bold blue"),
-                align="center"
-            ),
-            subtitle="Ethereum Name Service Management Tool",
-            box=box.DOUBLE
-        )
-        self.console.print(header)
+    def display_header(self, animate: bool = True):
+        """Display application header with optional color-cycling animation."""
+        ascii_logo = figlet_format("ENS Manager", font="slant")
+
+        def _rainbow_text(figlet_str: str) -> Text:
+            """Return Text object where each non-space char cycles through rainbow colors."""
+            rainbow_colors = [
+                "bright_red",
+                "bright_yellow",
+                "bright_green",
+                "bright_cyan",
+                "bright_blue",
+                "bright_magenta",
+            ]
+            txt = Text()
+            color_index = 0
+            for ch in figlet_str:
+                if ch.strip():
+                    txt.append(ch, style=rainbow_colors[color_index % len(rainbow_colors)])
+                    color_index += 1
+                else:
+                    txt.append(ch)
+            return txt
+
+        banner_text = _rainbow_text(ascii_logo)
+
+        def _panel(text: Text, border_color: str = "bright_blue"):
+            return Panel(
+                text,
+                box=box.DOUBLE,
+                border_style=border_color,
+                padding=(1, 2),
+                title="★  ENS Manager  ★",
+                subtitle="Ethereum Name Service Toolkit • by accessor.eth"
+            )
+
+        def _random_ens_name() -> str:
+            letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+            length = random.randint(3, 8)
+            name = "".join(random.choice(letters) for _ in range(length))
+            return f"{name}.eth"
+
+        def _matrix_effect(duration: float = 1.5, width: int = 60, height: int = 12):
+            """Display a falling matrix of random ENS names for visual flair."""
+            frames = int(duration / 0.05)
+            lines = [" " * width for _ in range(height)]
+            initial = Text("\n".join(lines), style="green")
+            with Live(initial, console=self.console, refresh_per_second=20) as live:
+                for _ in range(frames):
+                    # Shift lines down
+                    lines.pop()
+                    # Create new top line composed of random ENS names separated by spaces
+                    new_line = " ".join(_random_ens_name() for _ in range(width // 10))
+                    lines.insert(0, new_line[:width].ljust(width))
+                    live.update(Text("\n".join(lines), style="green"))
+                    time.sleep(0.05)
+
+        if animate:
+            # ---------- Matrix waterfall of ENS names ---------- #
+            _matrix_effect()
+
+            # Clear the matrix so the banner can be revealed in the same space
+            self.console.clear()
+
+            # ---------- Fade-in rainbow banner ---------- #
+            border_colors = [
+                "bright_red",
+                "bright_yellow",
+                "bright_green",
+                "bright_cyan",
+                "bright_magenta",
+                "bright_blue",
+            ]
+
+            banner_lines_raw = ascii_logo.splitlines()
+            assembled_text = Text()
+
+            with Live(_panel(assembled_text), console=self.console, refresh_per_second=30) as live:
+                # Gradually append each line to create a fade-in effect
+                for raw_line in banner_lines_raw:
+                    rainbow_line = _rainbow_text(raw_line + "\n")
+                    assembled_text.append(rainbow_line)
+                    live.update(_panel(assembled_text))
+                    time.sleep(0.05)
+
+                # Cycle the border colors a few times for flair
+                for i in range(18):
+                    live.update(_panel(assembled_text, border_color=border_colors[i % len(border_colors)]))
+                    time.sleep(0.04)
+            # Live context exits leaving the last frame rendered
+        else:
+            # Static banner only
+            self.console.print(_panel(banner_text))
     
     def display_simple_title(self):
         """Display a simple title without the full banner."""
@@ -78,7 +163,7 @@ class UIManager:
                 title,
                 choices=options,
                 style=QUESTIONARY_STYLE,
-                qmark="🔹",
+                qmark="*",
                 instruction="(Use arrow keys and Enter to select)",
                 show_selected=True
             ).ask()
@@ -196,12 +281,12 @@ class UIManager:
             return questionary.password(
                 message,
                 style=QUESTIONARY_STYLE,
-                qmark="🔒"
+                qmark="[pwd]"
             ).ask()
         return questionary.text(
             message,
             style=QUESTIONARY_STYLE,
-            qmark="💭"
+            qmark=">"
         ).ask()
         
     def confirm(self, message: str) -> bool:
@@ -209,7 +294,7 @@ class UIManager:
         return questionary.confirm(
             message,
             style=QUESTIONARY_STYLE,
-            qmark="❓"
+            qmark="?"
         ).ask()
         
     def display_success(self, message: str):
