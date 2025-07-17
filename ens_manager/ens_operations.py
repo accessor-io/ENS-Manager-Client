@@ -43,6 +43,17 @@ ENS_REGISTRY_ABI = [
         "outputs": [{"name": "", "type": "uint64"}],
         "payable": False,
         "type": "function"
+    },
+    {
+        "constant": False,
+        "inputs": [
+            {"name": "node", "type": "bytes32"},
+            {"name": "owner", "type": "address"}
+        ],
+        "name": "setOwner",
+        "outputs": [],
+        "payable": False,
+        "type": "function"
     }
 ]
 
@@ -64,6 +75,62 @@ ENS_RESOLVER_ABI = [
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
+    },
+    {
+        "inputs": [{"name": "node", "type": "bytes32"}],
+        "name": "addr",
+        "outputs": [{"name": "", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"name": "node", "type": "bytes32"}, {"name": "key", "type": "string"}],
+        "name": "text",
+        "outputs": [{"name": "", "type": "string"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"name": "node", "type": "bytes32"}],
+        "name": "contenthash",
+        "outputs": [{"name": "", "type": "bytes"}],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [{"name": "node", "type": "bytes32"}, {"name": "hash", "type": "bytes"}],
+        "name": "setContenthash",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "node", "type": "bytes32"},
+            {"indexed": False, "name": "key", "type": "string"},
+            {"indexed": False, "name": "value", "type": "string"}
+        ],
+        "name": "TextChanged",
+        "type": "event"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "node", "type": "bytes32"},
+            {"indexed": False, "name": "addr", "type": "address"}
+        ],
+        "name": "AddrChanged",
+        "type": "event"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "node", "type": "bytes32"},
+            {"indexed": False, "name": "hash", "type": "bytes"}
+        ],
+        "name": "ContenthashChanged",
+        "type": "event"
     }
 ]
 
@@ -94,6 +161,18 @@ ENS_CONTROLLER_ABI = [
         "outputs": [{"name": "", "type": "bool"}],
         "stateMutability": "view",
         "type": "function"
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {"indexed": True, "name": "name", "type": "string"},
+            {"indexed": True, "name": "label", "type": "bytes32"},
+            {"indexed": True, "name": "owner", "type": "address"},
+            {"indexed": False, "name": "cost", "type": "uint256"},
+            {"indexed": False, "name": "expires", "type": "uint256"}
+        ],
+        "name": "NameRegistered",
+        "type": "event"
     }
 ]
 
@@ -801,28 +880,29 @@ class ENSManager:
             resolver = self.w3.ens.resolver(name)
             if not resolver:
                 return {}
-            
+
             text_records = {}
             node = self.w3.ens.namehash(name)
-            
-            # Get TextChanged events to find all keys
-            text_changed_event = resolver.events.TextChanged()
-            text_events = text_changed_event.get_all_entries()
-            
-            # Extract unique keys from events
-            keys = set()
-            for event in text_events:
-                keys.add(event['args']['key'])
-            
-            # Get values for all keys
-            for key in keys:
+
+            # Instead of trying to get all keys from events, fetch common keys directly
+            common_keys = [
+                'email', 'url', 'avatar', 'description', 'notice', 'keywords',
+                'com.twitter', 'com.github', 'com.discord', 'com.reddit', 'com.telegram',
+                'org.telegram', 'eth.ens.delegate', 'eth.ens.dnssec', 'eth.ens.owner',
+                'eth.ens.resolver', 'eth.ens.expiry', 'eth.ens.registration_date',
+                'eth.ens.renewal_date', 'eth.ens.controller', 'eth.ens.contenthash',
+                'eth.ens.text', 'eth.ens.addr', 'eth.ens.abi', 'eth.ens.pubkey',
+                'eth.ens.multicoin', 'eth.ens.reverse', 'eth.ens.subdomain',
+                'eth.ens.subdomain_owner', 'eth.ens.subdomain_expiry', 'eth.ens.subdomain_controller'
+            ]
+            for key in common_keys:
                 try:
                     value = resolver.functions.text(node, key).call()
-                    if value and value.strip():  # Only include non-empty values
+                    if value and value.strip():
                         text_records[key] = value
                 except Exception:
                     continue
-                    
+
             return text_records
         except Exception as e:
             print(f"Error getting text records for {name}: {e}")
