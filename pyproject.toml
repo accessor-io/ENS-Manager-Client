@@ -33,6 +33,7 @@ python-dotenv = "^1.0.0"
 eth-utils = "^2.1.0"
 base58 = "^2.1.1"
 questionary = "^2.0.1"
+pyfiglet = "^0.8"
 cryptography = "^42.0.0"
 typing-extensions = "^4.0.0"
 

@@ -1592,6 +1592,185 @@ class ENSManager:
             'transactions': transactions
         }
 
+    def get_comprehensive_activity(self, name: str, 
+                                 start_date: Optional[datetime] = None,
+                                 end_date: Optional[datetime] = None,
+                                 include_price_analysis: bool = True,
+                                 include_network_analysis: bool = True) -> Dict[str, Any]:
+        """Get comprehensive activity analysis including price trends, ownership patterns, and network activity."""
+        from collections import defaultdict
+        import statistics
+        
+        # Get basic activity data
+        basic_activity = self.get_name_activity(name, start_date, end_date, include_transactions=True)
+        
+        comprehensive_data = {
+            'name': name,
+            'period': basic_activity['period'],
+            'events': basic_activity['events'],
+            'transactions': basic_activity['transactions'],
+            'analysis': {},
+            'patterns': {},
+            'metrics': {}
+        }
+        
+        events = basic_activity['events']
+        transactions = basic_activity['transactions']
+        
+        # Activity intensity analysis
+        total_activities = len(events) + len(transactions)
+        comprehensive_data['metrics']['total_activities'] = total_activities
+        
+        if total_activities > 0:
+            # Daily activity pattern
+            daily_activity = defaultdict(int)
+            hourly_activity = defaultdict(int)
+            
+            for event in events:
+                timestamp = datetime.fromisoformat(event['timestamp'])
+                daily_activity[timestamp.date()] += 1
+                hourly_activity[timestamp.hour] += 1
+            
+            for tx in transactions:
+                timestamp = tx['timestamp']
+                if hasattr(timestamp, 'date'):
+                    daily_activity[timestamp.date()] += 1
+                    hourly_activity[timestamp.hour] += 1
+            
+            comprehensive_data['patterns']['daily_activity'] = dict(daily_activity)
+            comprehensive_data['patterns']['hourly_activity'] = dict(hourly_activity)
+            
+            # Most active periods
+            if daily_activity:
+                most_active_day = max(daily_activity.items(), key=lambda x: x[1])
+                least_active_day = min(daily_activity.items(), key=lambda x: x[1])
+                comprehensive_data['analysis']['most_active_day'] = {
+                    'date': most_active_day[0].isoformat(),
+                    'activities': most_active_day[1]
+                }
+                comprehensive_data['analysis']['least_active_day'] = {
+                    'date': least_active_day[0].isoformat(),
+                    'activities': least_active_day[1]
+                }
+            
+            if hourly_activity:
+                most_active_hour = max(hourly_activity.items(), key=lambda x: x[1])
+                comprehensive_data['analysis']['most_active_hour'] = {
+                    'hour': most_active_hour[0],
+                    'activities': most_active_hour[1]
+                }
+        
+        # Event type analysis
+        event_types = defaultdict(int)
+        for event in events:
+            event_types[event['type']] += 1
+        
+        comprehensive_data['analysis']['event_types'] = dict(event_types)
+        
+        # Transaction analysis
+        if transactions:
+            # Value analysis
+            values = [float(tx.get('value', 0)) for tx in transactions]
+            comprehensive_data['metrics']['total_value'] = sum(values)
+            comprehensive_data['metrics']['avg_value'] = statistics.mean(values) if values else 0
+            comprehensive_data['metrics']['max_value'] = max(values) if values else 0
+            comprehensive_data['metrics']['min_value'] = min(values) if values else 0
+            
+            # Contract analysis
+            contract_stats = defaultdict(lambda: {'count': 0, 'value': 0})
+            for tx in transactions:
+                contract = tx.get('contract', 'Unknown')
+                value = float(tx.get('value', 0))
+                contract_stats[contract]['count'] += 1
+                contract_stats[contract]['value'] += value
+            
+            comprehensive_data['analysis']['contract_activity'] = dict(contract_stats)
+            
+            # Address analysis
+            unique_addresses = set()
+            address_activity = defaultdict(int)
+            
+            for tx in transactions:
+                from_addr = tx.get('from', '')
+                to_addr = tx.get('to', '')
+                
+                if from_addr:
+                    unique_addresses.add(from_addr)
+                    address_activity[from_addr] += 1
+                
+                if to_addr:
+                    unique_addresses.add(to_addr)
+                    address_activity[to_addr] += 1
+            
+            comprehensive_data['metrics']['unique_addresses'] = len(unique_addresses)
+            comprehensive_data['analysis']['address_activity'] = dict(address_activity)
+            
+            # Most active addresses
+            if address_activity:
+                most_active_address = max(address_activity.items(), key=lambda x: x[1])
+                comprehensive_data['analysis']['most_active_address'] = {
+                    'address': most_active_address[0],
+                    'transactions': most_active_address[1]
+                }
+        
+        # Ownership pattern analysis
+        ownership_changes = []
+        for event in events:
+            if event['type'] in ['Transfer', 'NewOwner']:
+                ownership_changes.append({
+                    'timestamp': event['timestamp'],
+                    'type': event['type'],
+                    'data': event['data']
+                })
+        
+        comprehensive_data['analysis']['ownership_changes'] = ownership_changes
+        comprehensive_data['metrics']['ownership_changes'] = len(ownership_changes)
+        
+        # Activity intensity classification
+        if total_activities > 50:
+            intensity = "Very High"
+        elif total_activities > 20:
+            intensity = "High"
+        elif total_activities > 10:
+            intensity = "Medium"
+        elif total_activities > 5:
+            intensity = "Low"
+        else:
+            intensity = "Very Low"
+        
+        comprehensive_data['analysis']['activity_intensity'] = intensity
+        
+        # Network activity analysis (if enabled)
+        if include_network_analysis:
+            try:
+                # Get current owner and resolver
+                current_owner = self.get_owner(name)
+                current_resolver = self.get_resolver(name)
+                
+                comprehensive_data['analysis']['current_state'] = {
+                    'owner': current_owner,
+                    'resolver': current_resolver,
+                    'resolved_address': self.resolve_name(name)
+                }
+                
+                # Check for cross-network activity
+                if hasattr(self, 'network_manager'):
+                    network_resolutions = {}
+                    for network in self.network_manager.get_available_networks():
+                        try:
+                            resolution = self.resolve_name_on_network(name, network)
+                            if resolution:
+                                network_resolutions[network] = resolution
+                        except:
+                            continue
+                    
+                    comprehensive_data['analysis']['cross_network_activity'] = network_resolutions
+                    
+            except Exception as e:
+                comprehensive_data['analysis']['network_analysis_error'] = str(e)
+        
+        return comprehensive_data
+
     def get_reverse_records(self, addresses: List[str]) -> Dict[str, Optional[str]]:
         """Get reverse records for multiple addresses."""
         results = {}

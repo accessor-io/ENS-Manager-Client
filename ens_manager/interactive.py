@@ -13,7 +13,7 @@ from .ui_manager import UIManager
 
 ui = UIManager()
 config_manager = ConfigManager()
-console = Console()
+console = ui.console
 
 def init_manager() -> Optional[ENSManager]:
     """Initialize ENS Manager with current configuration."""
@@ -255,6 +255,8 @@ def interactive_menu():
         "Get expiration date",
         "Get text records",
         "View name history",
+        "View transaction history",
+        "Comprehensive name activity",
         "Manage names",
         "Manage networks",
         "Manage providers",
@@ -390,6 +392,48 @@ def interactive_menu():
                         ui.display_history(history, name)
                     else:
                         ui.display_error(f"No history found for {name}")
+                        
+            elif action == "View transaction history":
+                name = ui.prompt_input("Enter ENS name:")
+                if name:
+                    # Use asyncio to handle the async transaction history function
+                    import asyncio
+                    try:
+                        transactions = asyncio.run(manager.get_transaction_history(name))
+                        if transactions:
+                            ui.display_transaction_history(transactions, name)
+                        else:
+                            ui.display_warning(f"No transaction history found for {name}")
+                    except Exception as e:
+                        ui.display_error(f"Could not get transaction history for {name}: {str(e)}")
+                        
+            elif action == "Comprehensive name activity":
+                name = ui.prompt_input("Enter ENS name:")
+                if name:
+                    days = ui.prompt_input("Enter number of days to analyze (default: 30):")
+                    days = int(days) if days.isdigit() else 30
+                    
+                    try:
+                        from datetime import datetime, timedelta
+                        import asyncio
+                        
+                        end_date = datetime.now()
+                        start_date = end_date - timedelta(days=days)
+                        
+                        # Get comprehensive activity data
+                        activity_data = manager.get_comprehensive_activity(
+                            name,
+                            start_date=start_date,
+                            end_date=end_date,
+                            include_price_analysis=True,
+                            include_network_analysis=True
+                        )
+                        
+                        # Display comprehensive activity report
+                        ui.display_comprehensive_activity(activity_data, name, days)
+                        
+                    except Exception as e:
+                        ui.display_error(f"Could not get comprehensive activity for {name}: {str(e)}")
             
             ui.pause()
         except Exception as e:

@@ -75,6 +75,10 @@ The interactive menu provides the following options:
 - Private keys are never stored in plain text
 - Single master password protects all configurations
 
+## Author
+
+accessor.eth
+
 ## License
 
 MIT License 

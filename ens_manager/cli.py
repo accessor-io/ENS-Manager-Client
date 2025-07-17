@@ -23,7 +23,7 @@ from .ui_manager import UIManager
 
 ui = UIManager()
 config_manager = ConfigManager()
-console = Console()
+console = ui.console
 
 def init_manager() -> Optional[ENSManager]:
     """Initialize ENS Manager with current configuration."""

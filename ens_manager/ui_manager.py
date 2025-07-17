@@ -358,6 +358,336 @@ class UIManager:
         layout["main"].update(table)
         self.console.print(layout)
         
+    def display_transaction_history(self, transactions: List[Dict[str, Any]], name: str):
+        """Display transaction history for an ENS name with enhanced styling."""
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header"),
+            Layout(name="main")
+        )
+        
+        # Header
+        layout["header"].update(
+            Panel(
+                f"[header]Transaction History for:[/header] [highlight]{name}[/highlight]",
+                box=ROUNDED
+            )
+        )
+        
+        # Main content
+        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        table.add_column("Hash", style="cyan", width=20)
+        table.add_column("From", style="green", width=20)
+        table.add_column("To", style="blue", width=20)
+        table.add_column("Contract", style="yellow", width=12)
+        table.add_column("Value (ETH)", style="magenta", width=12)
+        table.add_column("Time", style="white", width=20)
+        
+        for tx in transactions:
+            # Truncate hash for display
+            hash_display = f"{tx['hash'][:10]}...{tx['hash'][-8:]}"
+            
+            # Format timestamp
+            timestamp = tx['timestamp']
+            if hasattr(timestamp, 'strftime'):
+                time_display = timestamp.strftime("%Y-%m-%d %H:%M")
+            else:
+                time_display = str(timestamp)
+            
+            # Format value
+            value = tx.get('value', 0)
+            if hasattr(value, '__float__'):
+                value_display = f"{float(value):.6f}"
+            else:
+                value_display = str(value)
+            
+            table.add_row(
+                hash_display,
+                tx.get('from', 'N/A'),
+                tx.get('to', 'N/A'),
+                tx.get('contract', 'N/A'),
+                value_display,
+                time_display
+            )
+                
+        layout["main"].update(table)
+        self.console.print(layout)
+        
+        # Show summary
+        total_transactions = len(transactions)
+        total_value = sum(float(tx.get('value', 0)) for tx in transactions)
+        
+        summary_panel = Panel(
+            f"[header]Summary:[/header] {total_transactions} transactions, "
+            f"Total value: {total_value:.6f} ETH",
+            box=ROUNDED,
+            border_style="bright_blue"
+        )
+        self.console.print(summary_panel)
+        
+    def display_comprehensive_activity(self, activity_data: Dict[str, Any], name: str, days: int):
+        """Display comprehensive activity analysis for an ENS name."""
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        layout = Layout()
+        layout.split_column(
+            Layout(name="header"),
+            Layout(name="summary"),
+            Layout(name="events"),
+            Layout(name="transactions"),
+            Layout(name="patterns"),
+            Layout(name="analysis")
+        )
+        
+        # Header
+        layout["header"].update(
+            Panel(
+                f"[header]Comprehensive Activity Analysis for:[/header] [highlight]{name}[/highlight]\n"
+                f"[dim]Period: Last {days} days[/dim]",
+                box=ROUNDED
+            )
+        )
+        
+        # Summary statistics
+        events = activity_data.get('events', [])
+        transactions = activity_data.get('transactions', [])
+        metrics = activity_data.get('metrics', {})
+        analysis = activity_data.get('analysis', {})
+        
+        summary_table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
+        summary_table.add_column("Metric", style="cyan")
+        summary_table.add_column("Count", style="green")
+        summary_table.add_column("Details", style="yellow")
+        
+        summary_table.add_row("Total Events", str(len(events)), "On-chain events")
+        summary_table.add_row("Total Transactions", str(len(transactions)), "Etherscan transactions")
+        summary_table.add_row("Total Activities", str(metrics.get('total_activities', 0)), "Combined activity")
+        
+        # Calculate unique addresses
+        unique_addresses = set()
+        for tx in transactions:
+            unique_addresses.add(tx.get('from', ''))
+            unique_addresses.add(tx.get('to', ''))
+        unique_addresses.discard('')
+        
+        summary_table.add_row("Unique Addresses", str(len(unique_addresses)), "Involved in transactions")
+        
+        # Calculate total value
+        total_value = sum(float(tx.get('value', 0)) for tx in transactions)
+        summary_table.add_row("Total Value (ETH)", f"{total_value:.6f}", "Transaction values")
+        
+        # Add ownership changes
+        ownership_changes = metrics.get('ownership_changes', 0)
+        summary_table.add_row("Ownership Changes", str(ownership_changes), "Transfer events")
+        
+        # Add activity intensity
+        intensity = analysis.get('activity_intensity', 'Unknown')
+        summary_table.add_row("Activity Intensity", intensity, "Activity level")
+        
+        layout["summary"].update(Panel(summary_table, title="Summary Statistics"))
+        
+        # Events breakdown
+        if events:
+            event_table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
+            event_table.add_column("Timestamp", style="cyan")
+            event_table.add_column("Event Type", style="green")
+            event_table.add_column("Transaction", style="blue")
+            event_table.add_column("Details", style="yellow")
+            
+            # Group events by type
+            event_types = defaultdict(int)
+            
+            for event in events[-20:]:  # Show last 20 events
+                timestamp = datetime.fromisoformat(event['timestamp'])
+                formatted_time = timestamp.strftime('%Y-%m-%d %H:%M')
+                
+                # Format transaction hash
+                tx_hash = event['data'].get('transaction', 'N/A')
+                if len(tx_hash) > 20:
+                    tx_hash = f"{tx_hash[:10]}...{tx_hash[-8:]}"
+                
+                # Format details
+                details = []
+                for k, v in event['data'].get('args', {}).items():
+                    if k != 'node' and len(str(v)) < 50:  # Skip long values
+                        details.append(f"{k}: {v}")
+                details_str = "; ".join(details[:3])  # Limit to 3 details
+                
+                event_table.add_row(
+                    formatted_time,
+                    event['type'],
+                    tx_hash,
+                    details_str
+                )
+                
+                event_types[event['type']] += 1
+            
+            layout["events"].update(Panel(event_table, title="Recent Events"))
+            
+            # Event type breakdown
+            event_breakdown = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta")
+            event_breakdown.add_column("Event Type", style="cyan")
+            event_breakdown.add_column("Count", style="green")
+            event_breakdown.add_column("Percentage", style="yellow")
+            
+            total_events = len(events)
+            for event_type, count in sorted(event_types.items(), key=lambda x: x[1], reverse=True):
+                percentage = (count / total_events * 100) if total_events > 0 else 0
+                event_breakdown.add_row(event_type, str(count), f"{percentage:.1f}%")
+            
+            layout["events"].update(Panel(event_breakdown, title="Event Type Breakdown"))
+        else:
+            layout["events"].update(Panel("No events recorded in this period", title="Events"))
+        
+        # Transactions breakdown
+        if transactions:
+            tx_table = Table(box=box.ROUNDED, show_header=True, header_style="bold blue")
+            tx_table.add_column("Timestamp", style="cyan")
+            tx_table.add_column("Hash", style="green")
+            tx_table.add_column("From", style="blue")
+            tx_table.add_column("To", style="magenta")
+            tx_table.add_column("Value (ETH)", style="yellow")
+            tx_table.add_column("Contract", style="white")
+            
+            # Group transactions by contract
+            contract_stats = defaultdict(lambda: {'count': 0, 'value': 0})
+            
+            for tx in transactions[-15:]:  # Show last 15 transactions
+                timestamp = tx['timestamp']
+                if hasattr(timestamp, 'strftime'):
+                    formatted_time = timestamp.strftime('%Y-%m-%d %H:%M')
+                else:
+                    formatted_time = str(timestamp)
+                
+                # Format hash
+                tx_hash = f"{tx['hash'][:10]}...{tx['hash'][-8:]}"
+                
+                # Format addresses
+                from_addr = f"{tx['from'][:10]}...{tx['from'][-8:]}" if len(tx['from']) > 20 else tx['from']
+                to_addr = f"{tx['to'][:10]}...{tx['to'][-8:]}" if len(tx['to']) > 20 else tx['to']
+                
+                # Format value
+                value = float(tx.get('value', 0))
+                value_str = f"{value:.6f}"
+                
+                contract = tx.get('contract', 'N/A')
+                
+                tx_table.add_row(
+                    formatted_time,
+                    tx_hash,
+                    from_addr,
+                    to_addr,
+                    value_str,
+                    contract
+                )
+                
+                contract_stats[contract]['count'] += 1
+                contract_stats[contract]['value'] += value
+            
+            layout["transactions"].update(Panel(tx_table, title="Recent Transactions"))
+            
+            # Contract breakdown
+            contract_breakdown = Table(box=box.ROUNDED, show_header=True, header_style="bold blue")
+            contract_breakdown.add_column("Contract", style="cyan")
+            contract_breakdown.add_column("Transactions", style="green")
+            contract_breakdown.add_column("Total Value (ETH)", style="yellow")
+            
+            for contract, stats in sorted(contract_stats.items(), key=lambda x: x[1]['count'], reverse=True):
+                contract_breakdown.add_row(
+                    contract,
+                    str(stats['count']),
+                    f"{stats['value']:.6f}"
+                )
+            
+            layout["transactions"].update(Panel(contract_breakdown, title="Contract Activity"))
+        else:
+            layout["transactions"].update(Panel("No transactions found in this period", title="Transactions"))
+        
+        # Activity patterns
+        patterns = activity_data.get('patterns', {})
+        if patterns:
+            patterns_layout = Layout()
+            patterns_layout.split_row(
+                Layout(name="daily"),
+                Layout(name="hourly")
+            )
+            
+            # Daily activity pattern
+            daily_activity = patterns.get('daily_activity', {})
+            if daily_activity:
+                daily_table = Table(box=box.ROUNDED, show_header=True, header_style="bold green")
+                daily_table.add_column("Date", style="cyan")
+                daily_table.add_column("Activities", style="green")
+                
+                for date, count in sorted(daily_activity.items())[-10:]:  # Show last 10 days
+                    daily_table.add_row(date.strftime('%Y-%m-%d'), str(count))
+                
+                patterns_layout["daily"].update(Panel(daily_table, title="Daily Activity"))
+            
+            # Hourly activity pattern
+            hourly_activity = patterns.get('hourly_activity', {})
+            if hourly_activity:
+                hourly_table = Table(box=box.ROUNDED, show_header=True, header_style="bold green")
+                hourly_table.add_column("Hour", style="cyan")
+                hourly_table.add_column("Activities", style="green")
+                
+                for hour, count in sorted(hourly_activity.items()):
+                    hourly_table.add_row(f"{hour:02d}:00", str(count))
+                
+                patterns_layout["hourly"].update(Panel(hourly_table, title="Hourly Activity"))
+            
+            layout["patterns"].update(patterns_layout)
+        else:
+            layout["patterns"].update(Panel("No activity patterns available", title="Activity Patterns"))
+        
+        # Activity analysis
+        analysis_table = Table(box=box.ROUNDED, show_header=True, header_style="bold green")
+        analysis_table.add_column("Analysis", style="cyan")
+        analysis_table.add_column("Value", style="green")
+        
+        # Most active periods
+        if 'most_active_day' in analysis:
+            most_active = analysis['most_active_day']
+            analysis_table.add_row("Most Active Day", f"{most_active['date']}: {most_active['activities']} activities")
+        
+        if 'least_active_day' in analysis:
+            least_active = analysis['least_active_day']
+            analysis_table.add_row("Least Active Day", f"{least_active['date']}: {least_active['activities']} activities")
+        
+        if 'most_active_hour' in analysis:
+            most_active_hour = analysis['most_active_hour']
+            analysis_table.add_row("Most Active Hour", f"{most_active_hour['hour']:02d}:00 ({most_active_hour['activities']} activities)")
+        
+        # Value analysis
+        if transactions:
+            avg_value = metrics.get('avg_value', 0)
+            max_value = metrics.get('max_value', 0)
+            min_value = metrics.get('min_value', 0)
+            
+            analysis_table.add_row("Average Transaction Value", f"{avg_value:.6f} ETH")
+            analysis_table.add_row("Largest Transaction", f"{max_value:.6f} ETH")
+            analysis_table.add_row("Smallest Transaction", f"{min_value:.6f} ETH")
+        
+        # Most active address
+        if 'most_active_address' in analysis:
+            most_active_addr = analysis['most_active_address']
+            addr = most_active_addr['address']
+            short_addr = f"{addr[:10]}...{addr[-8:]}" if len(addr) > 20 else addr
+            analysis_table.add_row("Most Active Address", f"{short_addr} ({most_active_addr['transactions']} tx)")
+        
+        # Current state
+        if 'current_state' in analysis:
+            current_state = analysis['current_state']
+            owner = current_state.get('owner', 'Not set')
+            if owner and len(owner) > 20:
+                owner = f"{owner[:10]}...{owner[-8:]}"
+            analysis_table.add_row("Current Owner", owner)
+        
+        layout["analysis"].update(Panel(analysis_table, title="Activity Analysis"))
+        
+        self.console.print(layout)
+        
     def pause(self):
         """Display a styled pause prompt."""
         self.prompt_input("[dim]Press Enter to continue...[/dim]") 
