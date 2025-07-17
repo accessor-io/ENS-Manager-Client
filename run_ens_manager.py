@@ -466,10 +466,13 @@ def manage_names_simple(ui, config):
             name = ui.prompt_input("Enter name to register (without .eth):")
             if name:
                 try:
+                    # Normalize name (remove .eth if present)
+                    normalized_name = name.lower().replace('.eth', '').strip()
+                    
                     # Check availability first
                     available = manager.check_name_available(name)
                     if not available:
-                        ui.display_error(f"{name}.eth is not available")
+                        ui.display_error(f"{normalized_name}.eth is not available")
                         ui.pause()
                         continue
                     
@@ -530,11 +533,14 @@ def manage_names_simple(ui, config):
             name = ui.prompt_input("Enter name to check (without .eth):")
             if name:
                 try:
+                    # Normalize name (remove .eth if present)
+                    normalized_name = name.lower().replace('.eth', '').strip()
+                    
                     available = manager.check_name_available(name)
                     if available:
-                        ui.display_success(f"{name}.eth is available!")
+                        ui.display_success(f"{normalized_name}.eth is available!")
                     else:
-                        ui.display_error(f"{name}.eth is not available")
+                        ui.display_error(f"{normalized_name}.eth is not available")
                 except Exception as e:
                     ui.display_error(f"Error checking availability: {str(e)}")
                     
@@ -544,9 +550,12 @@ def manage_names_simple(ui, config):
                 duration = ui.prompt_input("Enter registration duration in years (default: 1):")
                 duration = int(duration) if duration.isdigit() else 1
                 try:
+                    # Normalize name (remove .eth if present)
+                    normalized_name = name.lower().replace('.eth', '').strip()
+                    
                     cost = manager.get_registration_cost(name, duration)
                     if cost is not None:
-                        ui.display_success(f"Registration cost for {name}.eth ({duration} year{'s' if duration != 1 else ''}): {cost} ETH")
+                        ui.display_success(f"Registration cost for {normalized_name}.eth ({duration} year{'s' if duration != 1 else ''}): {cost} ETH")
                     else:
                         ui.display_error("Could not get registration cost")
                 except Exception as e:
@@ -624,8 +633,10 @@ def manage_batch_operations_simple(ui, config, manager):
                     results = asyncio.run(manager.batch_check_availability(names))
                     ui.display_info("Name Availability Results:")
                     for name, available in results.items():
+                        # Normalize name for display
+                        normalized_name = name.lower().replace('.eth', '').strip()
                         status = "Available" if available else "Taken"
-                        ui.display_info(f"  {name}.eth: {status}")
+                        ui.display_info(f"  {normalized_name}.eth: {status}")
                 except Exception as e:
                     ui.display_error(f"Error checking names: {str(e)}")
                     
@@ -640,8 +651,10 @@ def manage_batch_operations_simple(ui, config, manager):
                     results = asyncio.run(manager.batch_get_costs(names, duration))
                     ui.display_info("Registration Cost Results:")
                     for name, cost in results.items():
+                        # Normalize name for display
+                        normalized_name = name.lower().replace('.eth', '').strip()
                         cost_str = f"{cost:.4f} ETH" if cost else "Error"
-                        ui.display_info(f"  {name}.eth: {cost_str}")
+                        ui.display_info(f"  {normalized_name}.eth: {cost_str}")
                 except Exception as e:
                     ui.display_error(f"Error getting costs: {str(e)}")
                     

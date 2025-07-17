@@ -877,9 +877,15 @@ class ENSManager:
     def get_all_text_records(self, name: str) -> Dict[str, str]:
         """Get all text records for ENS name."""
         try:
-            resolver = self.w3.ens.resolver(name)
-            if not resolver:
+            resolver_address = self.w3.ens.resolver(name)
+            if not resolver_address:
                 return {}
+
+            # Create resolver contract with our custom ABI
+            resolver = self.w3.eth.contract(
+                address=resolver_address,
+                abi=ENS_RESOLVER_ABI
+            )
 
             text_records = {}
             node = self.w3.ens.namehash(name)
@@ -911,9 +917,15 @@ class ENSManager:
     def get_content_hash(self, name: str) -> Optional[str]:
         """Get content hash for ENS name."""
         try:
-            resolver = self.w3.ens.resolver(name)
-            if not resolver:
+            resolver_address = self.w3.ens.resolver(name)
+            if not resolver_address:
                 return None
+            
+            # Create resolver contract with our custom ABI
+            resolver = self.w3.eth.contract(
+                address=resolver_address,
+                abi=ENS_RESOLVER_ABI
+            )
             
             content_hash = resolver.functions.contenthash(self.w3.ens.namehash(name)).call()
             
