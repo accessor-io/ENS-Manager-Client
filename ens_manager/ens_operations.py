@@ -729,7 +729,7 @@ class ENSManager:
     def __init__(self, provider_url: Optional[str] = None, private_key: Optional[str] = None):
         """Initialize ENS Manager."""
         load_dotenv()
-        self.provider_url = provider_url or os.getenv('ETH_PROVIDER_URL')
+        self.provider_url = provider_url or os.getenv('ETH_MAINNET_RPC') or os.getenv('ETH_PROVIDER_URL')
         self.private_key = private_key or os.getenv('ETH_PRIVATE_KEY')
         
         if not self.provider_url:

@@ -14,7 +14,7 @@ class ConfigManager:
     
     DEFAULT_PROVIDERS = {
         "Infura": "https://mainnet.infura.io/v3/{}",
-        "Alchemy": "https://eth-mainnet.alchemyapi.io/v2/{}",
+        "Alchemy": "https://eth-mainnet.g.alchemy.com/v2/{}",
         "QuickNode": "https://api.quicknode.com/{}"
     }
     
