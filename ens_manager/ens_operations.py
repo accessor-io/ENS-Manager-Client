@@ -848,19 +848,53 @@ class ENSManager:
 
     def get_resolver(self, name: str) -> Optional[str]:
         """Get resolver contract address for ENS name."""
+        return self._get_resolver_address(name)
+        
+    def _get_resolver_address(self, name: str) -> Optional[str]:
+        """Get resolver address using a robust method that handles different web3.py versions."""
         try:
+            # Try the direct ENS resolver method first
             resolver = self.w3.ens.resolver(name)
-            return resolver.address if resolver else None
+            if not resolver:
+                return None
+                
+            # Handle different return types from web3.py
+            if hasattr(resolver, 'address'):
+                return resolver.address
+            elif isinstance(resolver, str):
+                return resolver
+            elif hasattr(resolver, 'contract_address'):
+                return resolver.contract_address
+            else:
+                # Convert to string and try to extract address
+                resolver_str = str(resolver)
+                if resolver_str.startswith('<') and 'at' in resolver_str:
+                    # Extract address from contract object string representation
+                    import re
+                    match = re.search(r'at 0x[a-fA-F0-9]{40}', resolver_str)
+                    if match:
+                        return match.group(0)[3:]  # Remove 'at ' prefix
+                return resolver_str
         except Exception as e:
-            print(f"Error getting resolver for {name}: {e}")
+            print(f"Error getting resolver address for {name}: {e}")
             return None
 
-    def get_ttl(self, name: str) -> Optional[int]:
-        """Get TTL for ENS name."""
+    def get_ttl(self, name: str) -> Optional[str]:
+        """Get TTL (expiry date) for ENS name."""
         try:
-            node = self.w3.ens.namehash(name)
-            ttl = self.registry.functions.ttl(node).call()
-            return ttl
+            # Get the expiry date instead of raw TTL seconds
+            expiry_date = self.get_expiry_date(name)
+            if expiry_date:
+                return expiry_date.strftime("%Y-%m-%d %H:%M:%S UTC")
+            else:
+                # Fallback to raw TTL if expiry date not available
+                node = self.w3.ens.namehash(name)
+                ttl_seconds = self.registry.functions.ttl(node).call()
+                if ttl_seconds and ttl_seconds > 0:
+                    from datetime import datetime, timezone
+                    expiry = datetime.fromtimestamp(ttl_seconds, tz=timezone.utc)
+                    return expiry.strftime("%Y-%m-%d %H:%M:%S UTC")
+                return None
         except Exception as e:
             print(f"Error getting TTL for {name}: {e}")
             return None
@@ -877,7 +911,8 @@ class ENSManager:
     def get_all_text_records(self, name: str) -> Dict[str, str]:
         """Get all text records for ENS name."""
         try:
-            resolver_address = self.w3.ens.resolver(name)
+            # Get resolver address using a more robust method
+            resolver_address = self._get_resolver_address(name)
             if not resolver_address:
                 return {}
 
@@ -917,7 +952,8 @@ class ENSManager:
     def get_content_hash(self, name: str) -> Optional[str]:
         """Get content hash for ENS name."""
         try:
-            resolver_address = self.w3.ens.resolver(name)
+            # Get resolver address using a more robust method
+            resolver_address = self._get_resolver_address(name)
             if not resolver_address:
                 return None
             
@@ -1432,31 +1468,60 @@ class ENSManager:
     def get_subdomains(self, domain: str) -> List[str]:
         """Get list of subdomains for a domain."""
         try:
-            # Get all NewOwner events for the domain
-            node = self.w3.ens.namehash(domain)
-            
             # Get the latest block number
             latest_block = self.w3.eth.block_number
             
-            # Create filter for NewOwner events
+            # Use a more recent block range to avoid exceeding limits
+            # Start from a reasonable recent block (e.g., last 10000 blocks)
+            from_block = max(0, latest_block - 10000)
+            
+            # Create filter for NewOwner events with limited range
             event_filter = self.registry.events.NewOwner.create_filter(
-                fromBlock=0,
+                fromBlock=from_block,
                 toBlock=latest_block,
-                argument_filters={'node': node}
+                argument_filters={'node': self.w3.ens.namehash(domain)}
             )
             
-            # Get all events
-            events = event_filter.get_all_entries()
+            # Get events in chunks to avoid overwhelming the RPC
+            events = []
+            try:
+                events = event_filter.get_all_entries()
+            except Exception as filter_error:
+                if "exceeds max block range" in str(filter_error).lower():
+                    # Fallback: try with an even smaller range
+                    from_block = max(0, latest_block - 5000)
+                    event_filter = self.registry.events.NewOwner.create_filter(
+                        fromBlock=from_block,
+                        toBlock=latest_block,
+                        argument_filters={'node': self.w3.ens.namehash(domain)}
+                    )
+                    events = event_filter.get_all_entries()
+                else:
+                    raise filter_error
             
             # Process events to get subdomain names
             subdomains = set()
             for event in events:
                 try:
-                    # Try to get the label (subdomain name) from the event
-                    label = self.w3.ens.name(event['args']['owner'])
-                    if label:
-                        subdomains.add(label)
-                except:
+                    # Extract subdomain from the event args
+                    if 'label' in event['args']:
+                        # Some events have the label directly
+                        label = event['args']['label']
+                        if label:
+                            # Convert bytes to string if needed
+                            if isinstance(label, bytes):
+                                label = label.decode('utf-8').rstrip('\x00')
+                            subdomains.add(label)
+                    elif 'owner' in event['args']:
+                        # Try to get the label from the owner address
+                        try:
+                            label = self.w3.ens.name(event['args']['owner'])
+                            if label and label != domain:
+                                subdomains.add(label)
+                        except:
+                            continue
+                except Exception as event_error:
+                    print(f"Error processing subdomain event: {event_error}")
                     continue
             
             return list(subdomains)
@@ -1534,13 +1599,30 @@ class ENSManager:
             node = self.w3.ens.namehash(name)
             name_without_eth = name.lower().replace('.eth', '')
             
-            # Get the latest registration event
+            # Get the latest block number
             latest_block = self.w3.eth.block_number
-            events = self.controller.events.NameRegistered.get_logs(
-                fromBlock=0,
-                toBlock=latest_block,
-                argument_filters={'name': name_without_eth}
-            )
+            
+            # Use a more recent block range to avoid exceeding limits
+            from_block = max(0, latest_block - 10000)
+            
+            try:
+                # Get the latest registration event with limited range
+                events = self.controller.events.NameRegistered.get_logs(
+                    fromBlock=from_block,
+                    toBlock=latest_block,
+                    argument_filters={'name': name_without_eth}
+                )
+            except Exception as range_error:
+                if "exceeds max block range" in str(range_error).lower():
+                    # Fallback: try with an even smaller range
+                    from_block = max(0, latest_block - 5000)
+                    events = self.controller.events.NameRegistered.get_logs(
+                        fromBlock=from_block,
+                        toBlock=latest_block,
+                        argument_filters={'name': name_without_eth}
+                    )
+                else:
+                    raise range_error
             
             if not events:
                 return None
