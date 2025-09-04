@@ -27,9 +27,9 @@ def main():
                 return
         
         interactive_menu()
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+        ui.console.print("\n[accent]Goodbye![/accent]")
     except KeyboardInterrupt:
-        ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+        ui.console.print("\n[accent]Goodbye![/accent]")
     except Exception as e:
         ui.display_error(str(e))
 

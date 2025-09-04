@@ -55,7 +55,7 @@ async def main():
     ]
     for test_name in test_names:
         is_valid = manager.validate_name(test_name)
-        console.print(f"{test_name}: {'✓' if is_valid else '✗'}")
+        console.print(f"{test_name}: {'PASS' if is_valid else 'FAIL'}")
 
     # Example 7: Create subdomain
     console.print("\n[cyan]Example 7: Create subdomain[/cyan]")
@@ -63,7 +63,7 @@ async def main():
     subdomain = "test"
     owner_address = "0x1234567890123456789012345678901234567890"
     success = await manager.create_subdomain(domain, subdomain, owner_address)
-    console.print(f"Created subdomain: {'✓' if success else '✗'}")
+    console.print(f"Created subdomain: {'SUCCESS' if success else 'FAILED'}")
 
     # Example 8: List subdomains
     console.print("\n[cyan]Example 8: List subdomains[/cyan]")
@@ -79,7 +79,7 @@ async def main():
     console.print("\n[cyan]Example 9: Transfer subdomain[/cyan]")
     new_owner = "0x9876543210987654321098765432109876543210"
     success = await manager.transfer_subdomain(domain, subdomain, new_owner)
-    console.print(f"Transferred subdomain: {'✓' if success else '✗'}")
+    console.print(f"Transferred subdomain: {'SUCCESS' if success else 'FAILED'}")
 
     # Example 10: Batch create subdomains
     console.print("\n[cyan]Example 10: Batch create subdomains[/cyan]")
@@ -90,7 +90,7 @@ async def main():
     ]
     results = await manager.batch_create_subdomains(domain, subdomains_to_create)
     for name, success in results.items():
-        console.print(f"{name}: {'✓' if success else '✗'}")
+        console.print(f"{name}: {'PASS' if success else 'FAIL'}")
 
     # Example 11: Export subdomains
     console.print("\n[cyan]Example 11: Export subdomains[/cyan]")

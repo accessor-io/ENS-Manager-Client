@@ -32,47 +32,47 @@ def simple_interactive_menu():
         ui.display_header()
         
         actions = [
-            "🔍 Look up ENS information",
-            "🌐 Resolve ENS name",
-            "🔄 Reverse resolve address", 
-            "👤 Get owner",
-            "📝 Get resolver",
-            "⏰ Get TTL",
-            "📄 Get text record",
-            "📋 Get all text records",
-            "🔗 Get content hash",
-            "📜 View name history",
-            "📊 Advanced name analysis",
-            "🏷️ Manage names",
-            "🌍 Manage networks", 
-            "📈 Activity tracking",
-            "⚙️ Manage providers",
-            "👥 Manage accounts",
-            "🔧 View configuration",
-            "❌ Exit"
+            "Look up ENS information",
+            "Resolve ENS name",
+            "Reverse resolve address",
+            "Get owner",
+            "Get resolver",
+            "Get TTL",
+            "Get text record",
+            "Get all text records",
+            "Get content hash",
+            "View name history",
+            "Advanced name analysis",
+            "Manage names",
+            "Manage networks",
+            "Activity tracking",
+            "Manage providers",
+            "Manage accounts",
+            "View configuration",
+            "Exit"
         ]
         
         action = ui.create_menu("What would you like to do?", actions)
         
-        if action == "❌ Exit" or not action:
+        if action == "Exit" or not action:
             break
-            
-        elif action == "⚙️ Manage providers":
+
+        elif action == "Manage providers":
             manage_providers_simple(ui, config)
-            
-        elif action == "👥 Manage accounts":
+
+        elif action == "Manage accounts":
             manage_accounts_simple(ui, config)
-            
-        elif action == "🔧 View configuration":
+
+        elif action == "View configuration":
             display_config_simple(ui, config)
-            
-        elif action == "🏷️ Manage names":
+
+        elif action == "Manage names":
             manage_names_simple(ui, config)
-            
-        elif action == "🌍 Manage networks":
+
+        elif action == "Manage networks":
             manage_networks_simple(ui, config)
-            
-        elif action == "📈 Activity tracking":
+
+        elif action == "Activity tracking":
             manage_activity_simple(ui, config)
             
         else:
@@ -91,7 +91,7 @@ def simple_interactive_menu():
                 ui.pause()
                 continue
             
-            if action == "🔍 Look up ENS information":
+            if action == "Look up ENS information":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -105,16 +105,58 @@ def simple_interactive_menu():
                             "Content Hash": manager.get_content_hash(name)
                         }
                         
+                        # Add additional information
+                        try:
+                            # Check if name is available for registration
+                            available = manager.check_name_available(name)
+                            info["Available"] = "Yes" if available else "No"
+                            
+                            # Get registration cost if available
+                            if available:
+                                cost = manager.get_registration_cost(name, 1)  # 1 year
+                                if cost is not None:
+                                    info["Registration Cost (1yr)"] = f"{cost:.4f} ETH"
+                            
+                            # Get subdomains count
+                            try:
+                                subdomains = manager.get_subdomains(name)
+                                info["Subdomains"] = f"{len(subdomains)} found" if subdomains else "None"
+                            except:
+                                info["Subdomains"] = "Unknown"
+                                
+                        except Exception as additional_error:
+                            # Don't fail if additional info fails
+                            print(f"Note: Could not fetch additional information: {additional_error}")
+                        
                         # Add text records
                         text_records = manager.get_all_text_records(name)
                         for key, value in text_records.items():
                             info[f"Text: {key}"] = value
+                        
+                        # Get recent transactions for the footer
+                        try:
+                            from datetime import datetime, timedelta
+                            end_date = datetime.now()
+                            start_date = end_date - timedelta(days=7)  # Last 7 days
+                            
+                            activity_data = manager.get_name_activity(
+                                name,
+                                start_date=start_date,
+                                end_date=end_date,
+                                include_transactions=True
+                            )
+                            
+                            if activity_data.get('transactions'):
+                                info['recent_transactions'] = activity_data['transactions'][-5:]  # Last 5 transactions
+                        except Exception as tx_error:
+                            # Don't fail the main lookup if transaction history fails
+                            print(f"Note: Could not fetch recent transactions: {tx_error}")
                             
                         ui.display_ens_info(info)
                     except Exception as e:
                         ui.display_error(f"Error getting ENS information: {str(e)}")
                         
-            elif action == "🌐 Resolve ENS name":
+            elif action == "Resolve ENS name":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -126,7 +168,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error resolving name: {str(e)}")
                         
-            elif action == "🔄 Reverse resolve address":
+            elif action == "Reverse resolve address":
                 address = ui.prompt_input("Enter Ethereum address:")
                 if address:
                     try:
@@ -138,7 +180,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error reverse resolving: {str(e)}")
                         
-            elif action == "👤 Get owner":
+            elif action == "Get owner":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -150,7 +192,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting owner: {str(e)}")
                         
-            elif action == "📝 Get resolver":
+            elif action == "Get resolver":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -162,7 +204,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting resolver: {str(e)}")
                         
-            elif action == "⏰ Get TTL":
+            elif action == "Get TTL":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -174,7 +216,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting TTL: {str(e)}")
                         
-            elif action == "📄 Get text record":
+            elif action == "Get text record":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     key = ui.prompt_input("Enter text record key (e.g., email, url, avatar):")
@@ -188,7 +230,7 @@ def simple_interactive_menu():
                         except Exception as e:
                             ui.display_error(f"Error getting text record: {str(e)}")
                             
-            elif action == "📋 Get all text records":
+            elif action == "Get all text records":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -202,7 +244,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting text records: {str(e)}")
                         
-            elif action == "🔗 Get content hash":
+            elif action == "Get content hash":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -214,7 +256,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting content hash: {str(e)}")
                         
-            elif action == "📜 View name history":
+            elif action == "View name history":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -226,7 +268,7 @@ def simple_interactive_menu():
                     except Exception as e:
                         ui.display_error(f"Error getting history: {str(e)}")
                         
-            elif action == "📊 Advanced name analysis":
+            elif action == "Advanced name analysis":
                 name = ui.prompt_input("Enter ENS name:")
                 if name:
                     try:
@@ -269,7 +311,7 @@ def simple_interactive_menu():
         
         ui.pause()
     
-    ui.console.print("\n[accent]Goodbye! 👋[/accent]")
+    ui.console.print("\n[accent]Goodbye![/accent]")
 
 def manage_providers_simple(ui, config):
     """Simple provider management without Click."""
@@ -905,7 +947,7 @@ def main():
     try:
         simple_interactive_menu()
     except KeyboardInterrupt:
-        print("\nGoodbye! 👋")
+        print("\nGoodbye!")
     except Exception as e:
         print(f"Error: {str(e)}")
 

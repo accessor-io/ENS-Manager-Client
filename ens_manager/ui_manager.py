@@ -84,7 +84,7 @@ class UIManager:
                 box=box.DOUBLE,
                 border_style=border_color,
                 padding=(1, 2),
-                title="★  ENS Manager  ★",
+                title="ENS Manager",
                 subtitle="Ethereum Name Service Toolkit • by accessor.eth"
             )
 
@@ -182,35 +182,120 @@ class UIManager:
             return None
         
     def display_ens_info(self, info: Dict[str, Any]):
-        """Display ENS information in a styled table."""
+        """Display comprehensive ENS information with enhanced layout."""
         layout = Layout()
         layout.split_column(
-            Layout(name="header"),
+            Layout(name="header", size=3),
             Layout(name="main"),
-            Layout(name="footer")
+            Layout(name="footer", size=8)
         )
         
-        # Header
+        # Header with name and status
+        name = info.get('name', 'N/A')
+        address = info.get('Address')
+        owner = info.get('Owner')
+        
+        status = "[success]Active[/success]" if address else "[error]Not Resolved[/error]"
+        header_text = f"[header]ENS Name Information:[/header] [highlight]{name}[/highlight] {status}"
+        
         layout["header"].update(
             Panel(
-                f"[header]ENS Name Information:[/header] [highlight]{info.get('name', 'N/A')}[/highlight]",
-                box=ROUNDED
+                header_text,
+                box=ROUNDED,
+                border_style="bright_blue"
             )
         )
         
-        # Main content
-        table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
-        table.add_column("Property", style="cyan")
-        table.add_column("Value", style="green")
+        # Main content - Core Information
+        main_table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan", title="Core Information")
+        main_table.add_column("Property", style="cyan", width=20)
+        main_table.add_column("Value", style="green", width=50)
         
-        for key, value in info.items():
-            if key != 'name':
-                if value:
-                    table.add_row(key, str(value))
+        # Core properties in order of importance
+        core_properties = [
+            ('Address', 'Address'),
+            ('Owner', 'Owner'),
+            ('Resolver', 'Resolver'),
+            ('TTL', 'Expiry Date'),
+            ('Content Hash', 'Content Hash')
+        ]
+        
+        for display_name, key in core_properties:
+            value = info.get(key)
+            if value:
+                # Format long addresses
+                if key in ['Address', 'Owner', 'Resolver'] and len(str(value)) > 42:
+                    formatted_value = f"{str(value)[:20]}...{str(value)[-20:]}"
                 else:
-                    table.add_row(key, "[error]Not set[/error]")
+                    formatted_value = str(value)
+                main_table.add_row(display_name, formatted_value)
+            else:
+                main_table.add_row(display_name, "[dim]Not set[/dim]")
         
-        layout["main"].update(table)
+        layout["main"].update(main_table)
+        
+        # Footer - Text Records and Additional Info
+        footer_layout = Layout()
+        footer_layout.split_row(
+            Layout(name="text_records", ratio=2),
+            Layout(name="additional_info", ratio=1)
+        )
+        
+        # Text Records Section
+        text_records_table = Table(box=box.ROUNDED, show_header=True, header_style="bold yellow", title="Text Records")
+        text_records_table.add_column("Key", style="yellow", width=20)
+        text_records_table.add_column("Value", style="white", width=40)
+        
+        text_records_found = False
+        for key, value in info.items():
+            if key.startswith('Text: '):
+                text_records_found = True
+                record_key = key.replace('Text: ', '')
+                # Truncate long values
+                if len(str(value)) > 35:
+                    formatted_value = f"{str(value)[:32]}..."
+                else:
+                    formatted_value = str(value)
+                text_records_table.add_row(record_key, formatted_value)
+        
+        if not text_records_found:
+            text_records_table.add_row("No text records", "[dim]None found[/dim]")
+        
+        footer_layout["text_records"].update(text_records_table)
+        
+        # Additional Information Section
+        additional_info = []
+        
+        # Registration status
+        if owner:
+            additional_info.append(("Status", "[success]Registered[/success]"))
+        else:
+            additional_info.append(("Status", "[error]Not Registered[/error]"))
+        
+        # Name length analysis
+        name_without_eth = name.replace('.eth', '')
+        if len(name_without_eth) <= 3:
+            additional_info.append(("Length", f"[highlight]Short ({len(name_without_eth)})[/highlight]"))
+        elif len(name_without_eth) <= 6:
+            additional_info.append(("Length", f"[warning]Medium ({len(name_without_eth)})[/warning]"))
+        else:
+            additional_info.append(("Length", f"[dim]Long ({len(name_without_eth)})[/dim]"))
+        
+        # Check if it's a premium name (common words)
+        premium_words = ['eth', 'crypto', 'web3', 'defi', 'nft', 'dao', 'blockchain', 'wallet', 'exchange']
+        if name_without_eth.lower() in premium_words:
+            additional_info.append(("Premium", "[highlight]Yes[/highlight]"))
+        
+        additional_table = Table(box=box.ROUNDED, show_header=True, header_style="bold magenta", title="Additional Info")
+        additional_table.add_column("Property", style="magenta", width=15)
+        additional_table.add_column("Value", style="white", width=25)
+        
+        for key, value in additional_info:
+            additional_table.add_row(key, value)
+        
+        footer_layout["additional_info"].update(additional_table)
+        
+        layout["footer"].update(footer_layout)
         
         self.console.print(layout)
         
@@ -299,19 +384,19 @@ class UIManager:
         
     def display_success(self, message: str):
         """Display a success message."""
-        self.console.print(f"[success]✓[/success] {message}")
+        self.console.print(f"[success]SUCCESS[/success] {message}")
         
     def display_error(self, message: str):
         """Display an error message."""
-        self.console.print(f"[error]✗[/error] {message}")
+        self.console.print(f"[error]ERROR[/error] {message}")
         
     def display_warning(self, message: str):
         """Display a warning message."""
-        self.console.print(f"[warning]⚠[/warning] {message}")
+        self.console.print(f"[warning]WARNING[/warning] {message}")
         
     def display_info(self, message: str):
         """Display an info message."""
-        self.console.print(f"[info]ℹ[/info] {message}")
+        self.console.print(f"[info]INFO[/info] {message}")
         
     def display_history(self, history: List[Dict[str, Any]], name: str):
         """Display ENS name history with enhanced styling."""
@@ -690,4 +775,38 @@ class UIManager:
         
     def pause(self):
         """Display a styled pause prompt."""
-        self.prompt_input("[dim]Press Enter to continue...[/dim]") 
+        self.prompt_input("[dim]Press Enter to continue...[/dim]")
+        
+    def display_recent_transactions(self, transactions: List[Dict[str, Any]], name: str):
+        """Display recent transactions for an ENS name."""
+        if not transactions:
+            return
+            
+        tx_table = Table(
+            box=box.ROUNDED, 
+            show_header=True, 
+            header_style="bold bright_blue", 
+            title=f"Recent Transactions for {name}"
+        )
+        tx_table.add_column("Hash", style="bright_blue", width=20)
+        tx_table.add_column("Type", style="yellow", width=15)
+        tx_table.add_column("Block", style="cyan", width=10)
+        tx_table.add_column("Gas Used", style="green", width=12)
+        tx_table.add_column("Status", style="white", width=10)
+        
+        for tx in transactions[:5]:  # Show last 5 transactions
+            tx_hash = tx.get('hash', 'Unknown')
+            tx_type = tx.get('type', 'Unknown')
+            block = tx.get('block_number', 'Unknown')
+            gas_used = tx.get('gas_used', 'Unknown')
+            status = tx.get('status', 'Unknown')
+            
+            # Truncate hash for display
+            display_hash = f"{tx_hash[:8]}...{tx_hash[-6:]}" if len(tx_hash) > 14 else tx_hash
+            
+            # Color code status
+            status_style = "[success]Success[/success]" if status == 1 else "[error]Failed[/error]" if status == 0 else "[dim]Unknown[/dim]"
+            
+            tx_table.add_row(display_hash, tx_type, str(block), str(gas_used), status_style)
+        
+        self.console.print(tx_table) 
